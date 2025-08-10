@@ -1,8 +1,6 @@
-// src/App.jsx
 // ===== feature flags =====
-const AUTO_ROTATE_BEFORE_START = true;   // スタート前は地球がゆっくり回る
-const AUTO_ROTATE_IN_GAME      = false;  // スタート後は回転しない
-const AUTO_FOCUS               = false;  // 出題ごとの自動フォーカスはしない（不正解時のみ寄る）
+const AUTO_ROTATE = false;   // 自動回転なし（スタート前も静止）
+const AUTO_FOCUS  = false;   // 問題に合わせた自動カメラ移動なし（不正解時のみ正解へ寄る）
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Globe from "react-globe.gl";
@@ -72,7 +70,7 @@ function seededShuffle(arr, seedStr = "default") {
   return a;
 }
 
-// ===== Questions with hints =====
+// ===== Questions =====
 const RAW = [
   // 都市
   { name: "ニューヨーク", lat: 40.7128, lon: -74.006, hint: "都市・アメリカ" },
@@ -80,7 +78,7 @@ const RAW = [
   { name: "ロンドン", lat: 51.5074, lon: -0.1278, hint: "イギリスの首都" },
   { name: "サンフランシスコ", lat: 37.7749, lon: -122.4194, hint: "都市・アメリカ西海岸" },
   { name: "シンガポール", lat: 1.3521, lon: 103.8198, hint: "都市国家・東南アジア" },
-  { name: "イスタンブール", lat: 41.0082, lon: 28.9784, hint: "都市・トルコ" },
+  { name: "イスタンブール", lat: 41.0082, lon: 28.9784, hint: "都市・トルコ（欧亜境界）" },
   { name: "ドバイ", lat: 25.276987, lon: 55.296249, hint: "都市・UAE" },
   // ランドマーク
   { name: "エッフェル塔", lat: 48.8584, lon: 2.2945, hint: "ランドマーク・パリ" },
@@ -96,7 +94,7 @@ const RAW = [
   { name: "イグアスの滝", lat: -25.6953, lon: -54.4367, hint: "滝・アルゼンチン/ブラジル" },
   { name: "ハロン湾", lat: 20.9101, lon: 107.1839, hint: "湾・ベトナム" },
   { name: "パンタナール", lat: -16.711, lon: -56.162, hint: "湿地・ブラジル" },
-  // 山
+  // 山岳
   { name: "エベレスト山", lat: 27.9881, lon: 86.925, hint: "世界最高峰・ヒマラヤ" },
   { name: "富士山", lat: 35.3606, lon: 138.7274, hint: "日本・本州" },
   { name: "アンデス山脈", lat: -32.6532, lon: -70.0114, hint: "南米西部を縦断" },
@@ -130,7 +128,7 @@ const RAW = [
   { name: "ナウル", lat: -0.522778, lon: 166.931111, hint: "国・オセアニア小国" },
   // 湖・海
   { name: "バイカル湖", lat: 53.5587, lon: 108.1652, hint: "湖・ロシア" },
-  { name: "カスピ海", lat: 37.5, lon: 50.0, hint: "内海・ユーラシア" },
+  { name: "カスピ海", lat: 37.5, lon: 50, hint: "内海・ユーラシア" },
   { name: "ティティカカ湖", lat: -15.7652, lon: -69.5312, hint: "湖・ボリビア/ペルー" },
   // 建造物・遺跡
   { name: "ギザの大ピラミッド", lat: 29.9792, lon: 31.1342, hint: "エジプト・ギザ" },
@@ -162,10 +160,7 @@ const RAW = [
 ];
 function normalizeQuestions(raw) {
   return raw.map((r, idx) => ({
-    id: idx + 1,
-    name: r.name,
-    hint: r.hint || "",
-    coord: [r.lat, r.lon],
+    id: idx + 1, name: r.name, hint: r.hint || "", coord: [r.lat, r.lon]
   }));
 }
 const QUESTIONS = normalizeQuestions(RAW);
@@ -178,9 +173,9 @@ function getParams() {
   return {
     seed: p.get("seed") || null,
     dur: Math.max(10, Math.min(600, Number(p.get("dur") || 60))),
-    km: Math.max(10, Math.min(2000, Number(p.get("km") || 300))),
+    km : Math.max(10, Math.min(2000, Number(p.get("km")  || 300))),
     music: p.get("music") || "on",
-    song: p.get("song") || null,
+    song : p.get("song") || null
   };
 }
 function buildShareUrl({ seed, dur, km, music, song }) {
@@ -190,10 +185,10 @@ function buildShareUrl({ seed, dur, km, music, song }) {
       : "";
   const q = new URLSearchParams({
     seed: String(seed),
-    dur: String(dur),
-    km: String(km),
+    dur : String(dur),
+    km  : String(km),
     music,
-    ...(song ? { song } : {}),
+    ...(song ? { song } : {})
   });
   return `${base}?${q.toString()}`;
 }
@@ -204,38 +199,38 @@ export default function App() {
   const audioRef = useRef(null);
   const params = getParams();
 
-  const [musicOn, setMusicOn] = useState(params.music !== "off");
-  const [volume, setVolume] = useState(0.45);
+  const [musicOn, setMusicOn]   = useState(params.music !== "off");
+  const [volume, setVolume]     = useState(0.4);
   const [audioErr, setAudioErr] = useState("");
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
 
-  const [started, setStarted] = useState(false);
+  const [started, setStarted]   = useState(false);
+  const [gameOver, setGameOver] = useState(false);
   const [timeLeft, setTimeLeft] = useState(params.dur);
-  const [order, setOrder] = useState(() =>
+
+  const [order, setOrder]       = useState(() =>
     params.seed ? seededShuffle(QUESTIONS, params.seed) : shuffle(QUESTIONS)
   );
-  const [qIndex, setQIndex] = useState(0);
-  const [guess, setGuess] = useState(null);
-  const [result, setResult] = useState(null);
-  const [score, setScore] = useState(0);
+  const [qIndex, setQIndex]     = useState(0);
+  const [guess, setGuess]       = useState(null);
+  const [result, setResult]     = useState(null);
+  const [score, setScore]       = useState(0);
   const [answered, setAnswered] = useState(0);
-  const [correct, setCorrect] = useState(0);
+  const [correct, setCorrect]   = useState(0);
 
-  const current = order[qIndex % order.length];
+  const current   = order[qIndex % order.length];
   const MUSIC_URL = resolveMusicUrl(undefined, DEFAULT_MUSIC_URL);
 
-  // ===== Audio unlock helpers =====
+  // ===== Audio unlock (iOS対策) =====
   const triedUnlockRef = useRef(false);
   const unlockAudio = async () => {
     const el = audioRef.current;
     if (!el) return false;
     try {
       const prevMuted = el.muted;
-      el.muted = true;
-      await el.play(); // 無音で一瞬再生
+      el.muted = true;          // 無音で一瞬再生→停止でアンロック
+      await el.play();
       el.pause();
       el.muted = prevMuted;
-      setAudioUnlocked(true);
       return true;
     } catch {
       return false;
@@ -243,27 +238,20 @@ export default function App() {
   };
   const ensureAudioStart = async () => {
     const el = audioRef.current;
-    if (!el || !musicOn) return;
+    if (!el) return;
     try {
       await el.play();
       setAudioErr("");
-      setAudioUnlocked(true);
     } catch {
       const ok = await unlockAudio();
       if (ok) {
-        try {
-          await el.play();
-          setAudioErr("");
-          setAudioUnlocked(true);
-          return;
-        } catch {}
+        try { await el.play(); setAudioErr(""); return; } catch {}
       }
-      setAudioErr("音の自動再生がブロックされました。『音を有効にする』を押してください。");
+      setAudioErr("自動再生がブロックされました。「音を有効にする」を押してください。");
     }
   };
-
+  // 最初のタップでロック解除を試す
   useEffect(() => {
-    // どこか1回タップでアンロック
     if (triedUnlockRef.current) return;
     const handler = async () => {
       triedUnlockRef.current = true;
@@ -286,8 +274,7 @@ export default function App() {
     el.volume = Math.max(0, Math.min(1, volume));
     if (started && musicOn) {
       el.play().catch(() => {
-        setAudioErr("音の自動再生がブロックされました。『音を有効にする』を押してください。");
-        setAudioUnlocked(false);
+        setAudioErr("自動再生がブロックされました。「音を有効にする」を押してください。");
       });
     } else {
       el.pause();
@@ -299,25 +286,28 @@ export default function App() {
     if (!started) return;
     if (timeLeft <= 0) {
       setStarted(false);
+      setGameOver(true);
       return;
     }
     const t = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
     return () => clearTimeout(t);
   }, [started, timeLeft]);
 
-  // ===== Globe controls: 回転制御（スタート前/後で切替） =====
+  // ===== Globe controls =====
   useEffect(() => {
-    const controls = globeRef.current?.controls?.();
+    if (!globeRef.current) return;
+    const controls = globeRef.current.controls?.();
     if (!controls) return;
-    controls.autoRotate = started ? !!AUTO_ROTATE_IN_GAME : !!AUTO_ROTATE_BEFORE_START;
+    controls.autoRotate = !!AUTO_ROTATE;
     controls.autoRotateSpeed = 0.5;
-  }, [started]);
+  }, []);
 
   function focusOn([lat, lon]) {
-    const g = globeRef.current;
-    if (!g) return;
-    const doSet = () => g.pointOfView({ lat, lng: lon, altitude: 1.8 }, 800);
-    if (g.pointOfView) doSet(); else setTimeout(doSet, 50);
+    if (!globeRef.current) return;
+    const doSet = () =>
+      globeRef.current.pointOfView({ lat, lng: lon, altitude: 1.8 }, 800);
+    if (globeRef.current.pointOfView) doSet();
+    else setTimeout(doSet, 50);
   }
 
   function startGame() {
@@ -325,37 +315,48 @@ export default function App() {
     if (el) {
       el.src = MUSIC_URL;
       el.load();
-      el.currentTime = 0;
+      if (musicOn) {
+        el.currentTime = 0;
+        ensureAudioStart(); // ← スマホで確実に再生開始
+      } else {
+        el.pause();
+      }
     }
     const seed = params.seed || `${Date.now()}`;
     const newOrder = seededShuffle(QUESTIONS, seed);
     setOrder(newOrder);
     setStarted(true);
+    setGameOver(false);
     setTimeLeft(params.dur);
-    setScore(0); setAnswered(0); setCorrect(0); setQIndex(0);
-    setGuess(null); setResult(null);
-    if (musicOn) ensureAudioStart();
+    setScore(0); setAnswered(0); setCorrect(0);
+    setQIndex(0); setGuess(null); setResult(null);
   }
 
+  // ===== 次の問題 =====
   function nextQuestion() {
     setGuess(null);
     setResult(null);
     setQIndex((prev) => prev + 1);
   }
 
-  // 回答評価：不正解→正解地点へ寄る、1秒静止して次へ
+  // ===== 回答評価（不正解は正解地点へ寄せる＋1秒待って次へ） =====
   function evaluate(finalGuess) {
     const distKm = finalGuess
       ? Math.round(haversineKm(finalGuess, current.coord))
       : 20000;
     const ok = distKm <= (params.km || 300);
     const gained = Math.max(0, Math.round(250 - distKm));
+
     setScore((s) => s + gained);
     setAnswered((n) => n + 1);
     if (ok) setCorrect((n) => n + 1);
+
     setResult({ distKm, correct: ok, gained, qId: current.id });
+
+    // 正解：静止 / 不正解：正解地点へ寄せる
     if (!ok) focusOn(current.coord);
-    setTimeout(nextQuestion, 1000);
+
+    setTimeout(nextQuestion, 1000); // 1秒停止してから次へ
   }
 
   function handleGlobeClick({ lat, lng }) {
@@ -367,7 +368,8 @@ export default function App() {
   function handleShare() {
     const seed = params.seed || `${Date.now()}`;
     const url = buildShareUrl({
-      seed, dur: params.dur, km: params.km, music: musicOn ? "on" : "off", song: MUSIC_URL,
+      seed, dur: params.dur, km: params.km,
+      music: musicOn ? "on" : "off", song: MUSIC_URL
     });
     if (navigator.share) {
       navigator.share({ title: "セラ地理", text: "同じ順番で挑戦！", url }).catch(() => {});
@@ -384,7 +386,7 @@ export default function App() {
       arr.push({
         name: result.correct ? "正解" : "不正解",
         color: result.correct ? "#22C55E" : "#EF4444",
-        lat: current.coord[0], lng: current.coord[1],
+        lat: current.coord[0], lng: current.coord[1]
       });
     }
     return arr;
@@ -392,196 +394,229 @@ export default function App() {
 
   const arcs = useMemo(() => {
     if (!result || !guess || result.qId !== current.id) return [];
-    return [{ startLat: guess[0], startLng: guess[1], endLat: current.coord[0], endLng: current.coord[1] }];
+    return [{
+      startLat: guess[0], startLng: guess[1],
+      endLat: current.coord[0], endLng: current.coord[1]
+    }];
   }, [guess, result, current]);
 
   // ===== Globe textures =====
-  const earthDay = "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
+  const earthDay  = "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
   const earthBump = "https://unpkg.com/three-globe/example/img/earth-topology.png";
-  const globeMat = useMemo(
+  const globeMat  = useMemo(
     () => new THREE.MeshPhongMaterial({ color: 0x87b5e5, specular: 0x333333, shininess: 5 }),
     []
   );
 
-  // ===== スタイル計算（モバイル1画面に収める） =====
-  const headerH = 56;
-  const bottomH = 56;
-  const globeHStyle = {
-    height: `calc(100dvh - ${headerH}px - ${bottomH}px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))`,
-  };
+  // ===== styles =====
+  const safeTop    = "max(env(safe-area-inset-top), 8px)";
+  const safeBottom = "max(env(safe-area-inset-bottom), 8px)";
 
   return (
     <div
       style={{
-        minHeight: "100dvh",
+        minHeight: "100svh",
         color: "#e5f2ff",
         backgroundColor: "#000",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-        overflow: "hidden",
-        touchAction: "manipulation",
+        backgroundImage:
+          "radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.8) 50%, transparent 51%)," +
+          "radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,.7) 50%, transparent 51%)," +
+          "radial-gradient(2px 2px at 80% 20%, rgba(255,255,255,.9) 50%, transparent 51%)," +
+          "radial-gradient(2px 2px at 60% 50%, rgba(255,255,255,.6) 50%, transparent 51%)," +
+          "radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,.8) 50%, transparent 51%)," +
+          "radial-gradient(ellipse at 50% 120%, #0b1d3a 0%, #000 70%)"
       }}
     >
       <style>{`
         @keyframes popIn { 0%{transform:scale(.8);opacity:0} 40%{opacity:1} 70%{transform:scale(1.06)} 100%{transform:scale(1)} }
+        .topControls {
+          position: fixed;
+          left: 50%;
+          transform: translateX(-50%);
+          top: ${safeTop};
+          z-index: 30;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(0,0,0,.45);
+          padding: 8px 10px;
+          border-radius: 12px;
+          backdrop-filter: blur(6px);
+          border: 1px solid rgba(255,255,255,.12);
+        }
+        .topControls > * { pointer-events: auto; }
+        @media (max-width: 768px) {
+          .topControls { gap: 6px; }
+          .topControls .numbers { display: none; } /* 数字は下部に出す */
+        }
+        .bottomBar {
+          position: fixed; left: 0; right: 0;
+          bottom: calc(${safeBottom} - 4px);
+          z-index: 25;
+          display: flex; justify-content: center; gap: 12px;
+          padding: 8px 12px;
+          pointer-events: none;
+        }
+        .bottomInner {
+          pointer-events: auto;
+          display:flex; align-items:center; gap:10px;
+          background: rgba(0,0,0,.5);
+          border: 1px solid rgba(255,255,255,.12);
+          border-radius: 14px;
+          padding: 8px 10px;
+          backdrop-filter: blur(6px);
+        }
+        @media (min-width: 769px) {
+          .bottomBar { justify-content: space-between; }
+        }
       `}</style>
 
-      <audio ref={audioRef} src={MUSIC_URL} loop preload="auto" playsInline />
+      {/* ==== audio ==== */}
+      <audio ref={audioRef} src={MUSIC_URL} loop preload="auto" crossOrigin="anonymous" playsInline />
 
-      {/* ヘッダー（固定） */}
-      <header
-        style={{
-          position: "fixed",
-          top: 0, left: 0, right: 0,
-          height: headerH,
-          padding: "0 12px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          background: "rgba(0,0,0,.7)",
-          backdropFilter: "saturate(150%) blur(10px)",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          zIndex: 20,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontWeight: 900, fontSize: 24, letterSpacing: 1, WebkitTextStroke: "0.6px rgba(0,0,0,.6)" }}>
-            セラ地理
-          </div>
-          <div style={{ fontSize: 12, color: "#9fb3c9" }}>残り <b>{started ? timeLeft : params.dur}s</b></div>
-          <div style={{ fontSize: 12, color: "#9fb3c9" }}>正解 <b>{correct}</b> / 解答 <b>{answered}</b></div>
-        </div>
+      {/* ==== top controls (スマホでも潰れない固定バー) ==== */}
+      <div className="topControls">
+        <button onClick={() => setMusicOn((v) => !v)} style={btn()}>音楽: {musicOn ? "ON" : "OFF"}</button>
+        <input title="音量" type="range" min={0} max={1} step={0.01}
+               value={volume} onChange={(e) => setVolume(Number(e.target.value))}/>
+        <div className="numbers" style={pill()}>残り: <b>{started ? timeLeft : params.dur}s</b></div>
+        <div className="numbers" style={pill()}>正解: <b>{correct}</b> / 解答: <b>{answered}</b></div>
+        {!started ? (
+          <button onClick={startGame} style={primaryBtn()}>スタート</button>
+        ) : (
+          <button onClick={() => setStarted(false)} style={btn()}>一時停止</button>
+        )}
+        <button onClick={handleShare} style={btn()}>共有</button>
+      </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={() => setMusicOn((v) => !v)} style={btn()}>音楽: {musicOn ? "ON" : "OFF"}</button>
-          <input title="音量" type="range" min={0} max={1} step={0.01} value={volume} onChange={(e)=>setVolume(Number(e.target.value))}/>
-          {!started ? (
-            <button onClick={startGame} style={primaryBtn()}>スタート</button>
-          ) : (
-            <button onClick={() => setStarted(false)} style={btn()}>一時停止</button>
-          )}
-          <button onClick={handleShare} style={btn()}>共有</button>
-        </div>
-      </header>
-
-      {/* 問題バナー（ヘッダー下に固定） */}
-      {started && (
+      {/* ==== audio error toast ==== */}
+      {audioErr && (
         <div style={{
-          position: "fixed",
-          top: headerH + 6,
-          left: 12, right: 12,
-          zIndex: 15,
-          display: "flex", justifyContent: "center",
-          pointerEvents: "none",
-        }}>
-          <div style={{
-            maxWidth: 700, width: "100%",
-            background: "rgba(0,0,0,.45)",
-            color: "#fff",
-            padding: "8px 12px",
-            borderRadius: 12,
-            backdropFilter: "blur(2px)",
-            textAlign: "center",
-            boxShadow: "0 4px 12px rgba(0,0,0,.35)",
-          }}>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>問題：{current.name}</div>
-            <div style={{ fontSize: 12, opacity: .95 }}>ヒント：{current.hint || "（なし）"}</div>
-          </div>
-        </div>
-      )}
-
-      {/* 音を有効化バナー（右上） */}
-      {(audioErr || (musicOn && !audioUnlocked && started)) && (
-        <div style={{
-          position: "fixed", right: 10, top: headerH + 10, zIndex: 30,
-          background: "rgba(239,68,68,.95)", color: "#fff",
+          position: "fixed", right: 12, top: "calc(56px + " + safeTop + ")",
+          zIndex: 40, background: "rgba(239,68,68,.95)", color: "#fff",
           padding: "8px 12px", borderRadius: 10, boxShadow: "0 6px 16px rgba(0,0,0,.35)",
           display: "flex", alignItems: "center", gap: 8
         }}>
-          <span style={{ fontSize: 12 }}>{audioErr || "音を有効にしてください"}</span>
-          <button onClick={ensureAudioStart} style={{ padding: "6px 10px", borderRadius: 8, background: "#fff", color: "#ef4444", border: "none" }}>
+          <span>{audioErr}</span>
+          <button onClick={ensureAudioStart}
+                  style={{ padding: "6px 10px", borderRadius: 8, background: "#fff", color: "#ef4444",
+                           border: "none", cursor: "pointer" }}>
             音を有効にする
           </button>
         </div>
       )}
 
-      {/* 地球エリア（1画面にフィット） */}
-      <main style={{ marginTop: headerH, marginBottom: bottomH }}>
-        <div style={{ position: "relative", ...globeHStyle }}>
-          {/* スタート前オーバーレイ */}
-          {!started && (
-            <div style={{ position: "absolute", inset: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+      {/* ==== main (地球) ==== */}
+      <div style={{ position: "relative", maxWidth: 1120, margin: "0 auto" }}>
+        <div
+          style={{
+            position: "relative",
+            height: "calc(100svh - 120px)",  // 上下バーを考慮
+            marginTop: "72px"
+          }}
+        >
+          {/* スタート前タイトル */}
+          {!started && !gameOver && (
+            <div style={{
+              position: "absolute", inset: 0, zIndex: 10,
+              display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none"
+            }}>
               <div style={{ textAlign: "center", padding: 16 }}>
-                <div style={{ fontWeight: 900, fontSize: 48, color: "#fff", WebkitTextStroke: "2px #000", textShadow: "0 3px 8px rgba(0,0,0,.8)", marginBottom: 8 }}>
-                  セラ地理
-                </div>
+                <div style={{
+                  fontWeight: 900, fontSize: 56, color: "#fff",
+                  WebkitTextStroke: "2px #000", textShadow: "0 3px 8px rgba(0,0,0,.8)", marginBottom: 8
+                }}>セラ地理</div>
                 <div style={{ color: "#cbd5e1" }}>スタートを押してタイムアタック開始</div>
+              </div>
+            </div>
+          )}
+
+          {/* 問題バナー（上部に重ねる） */}
+          {started && (
+            <div style={{
+              position: "absolute", top: 8, left: 8, right: 8,
+              display: "flex", justifyContent: "center", zIndex: 9, pointerEvents: "none"
+            }}>
+              <div style={{
+                maxWidth: 560, width: "92%", background: "rgba(0,0,0,.45)", color: "#fff",
+                padding: "8px 12px", borderRadius: 12, backdropFilter: "blur(2px)",
+                boxShadow: "0 4px 12px rgba(0,0,0,.35)"
+              }}>
+                <div style={{ fontWeight: 800, fontSize: 18, textAlign: "center", textShadow: "0 2px 4px rgba(0,0,0,.6)" }}>
+                  問題：{current.name}
+                </div>
+                <div style={{ fontSize: 12, opacity: .95, textAlign: "center" }}>
+                  ヒント：{current.hint || "（なし）"}
+                </div>
               </div>
             </div>
           )}
 
           {/* 正解/不正解フラッシュ */}
           {result && result.qId === current.id && (
-            <div style={{ position: "absolute", inset: 0, zIndex: 11, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+            <div style={{ position: 'absolute', inset: 0, zIndex: 11, display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               <div style={{
-                fontSize: 56, fontWeight: 900, color: "#fff",
+                fontSize: 64, fontWeight: 900, color: '#fff',
                 WebkitTextStroke: `3px ${result.correct ? "#16a34a" : "#ef4444"}`,
-                textShadow: result.correct
-                  ? "0 0 18px rgba(34,197,94,.7), 0 0 36px rgba(34,197,94,.4)"
-                  : "0 0 18px rgba(239,68,68,.7), 0 0 36px rgba(239,68,68,.4)",
-                animation: "popIn .5s ease-out both"
-              }}>
-                {result.correct ? "正解！" : "不正解！"}
-              </div>
+                textShadow: `0 0 18px ${result.correct ? "rgba(34,197,94,.7)" : "rgba(239,68,68,.7)"},
+                             0 0 36px ${result.correct ? "rgba(34,197,94,.4)" : "rgba(239,68,68,.4)"}`,
+                animation: 'popIn .5s ease-out both'
+              }}>{result.correct ? "正解！" : "不正解！"}</div>
             </div>
           )}
 
+          {/* 地球 */}
           <Globe
             ref={globeRef}
             onGlobeClick={handleGlobeClick}
             globeImageUrl={earthDay}
             bumpImageUrl={earthBump}
             globeMaterial={globeMat}
-            showAtmosphere
-            atmosphereAltitude={0.18}
-            atmosphereColor="#7dd3fc"
+            showAtmosphere atmosphereAltitude={0.18} atmosphereColor="#7dd3fc"
             pointsData={points}
-            pointAltitude={() => 0.03}
-            pointRadius={0.6}
-            pointColor={(d) => d.color}
-            pointLabel={(d) => `${d.name}`}
+            pointAltitude={() => 0.03} pointRadius={0.6}
+            pointColor={(d) => d.color} pointLabel={(d) => `${d.name}`}
             arcsData={arcs}
             arcColor={() => ["#60A5FA", "#3B82F6"]}
-            arcDashLength={0.5}
-            arcDashGap={0.15}
-            arcDashAnimateTime={2000}
+            arcDashLength={0.5} arcDashGap={0.15} arcDashAnimateTime={2000}
             backgroundColor="rgba(0,0,0,0)"
           />
-        </div>
-      </main>
 
-      {/* 下部バー（固定） */}
-      <div
-        style={{
-          position: "fixed",
-          left: 0, right: 0, bottom: 0,
-          height: bottomH,
-          background: "rgba(0,0,0,0.7)",
-          backdropFilter: "blur(6px)",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          color: "#e2e8f0",
-          zIndex: 20,
-        }}
-      >
-        <div style={{ height: "100%", maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px" }}>
-          <div style={{ fontSize: 13 }}>残り <b>{started ? timeLeft : params.dur}s</b></div>
-          {!started ? (
-            <button onClick={startGame} style={primaryBtn()}>スタート</button>
-          ) : (
-            <button onClick={() => setStarted(false)} style={btn()}>一時停止</button>
+          {/* タイムアップ：中央に巨大スコア表示 */}
+          {gameOver && (
+            <div style={{
+              position: "absolute", inset: 0, zIndex: 20,
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: 16, textAlign: "center",
+              background: "rgba(0,0,0,.35)", backdropFilter: "blur(2px)"
+            }}>
+              <div style={{
+                fontSize: 22, color: "#e2e8f0", textShadow: "0 2px 6px rgba(0,0,0,.5)"
+              }}>タイムアップ！</div>
+              <div style={{
+                fontSize: 54, fontWeight: 900, color: "#fff",
+                WebkitTextStroke: "3px #16a34a",
+                textShadow: "0 0 18px rgba(34,197,94,.7), 0 0 36px rgba(34,197,94,.4)"
+              }}>
+                スコア：{score}
+              </div>
+              <div style={{ color: "#cbd5e1" }}>正解 {correct} ／ 解答 {answered}</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={startGame} style={primaryBtn()}>もう一度</button>
+                <button onClick={handleShare} style={btn()}>共有</button>
+              </div>
+            </div>
           )}
-          <button onClick={handleShare} style={primaryBtn()}>共有</button>
+        </div>
+      </div>
+
+      {/* ==== bottom bar（スマホでは数値をここにも表示） ==== */}
+      <div className="bottomBar">
+        <div className="bottomInner">
+          <div style={{ fontSize: 13 }}>残り <b>{started ? timeLeft : params.dur}s</b></div>
+          <div style={{ fontSize: 13 }}>正解: <b>{correct}</b> / 解答: <b>{answered}</b></div>
         </div>
       </div>
     </div>
@@ -589,26 +624,57 @@ export default function App() {
 }
 
 // ===== styles helpers =====
-function btn() { return { padding: "8px 12px", borderRadius: 12, background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 1px 2px rgba(0,0,0,0.4)" }; }
-function primaryBtn() { return { padding: "8px 12px", borderRadius: 12, background: "#16a34a", color: "#fff", border: "1px solid #16a34a", boxShadow: "0 2px 8px rgba(0,0,0,0.4)" }; }
+function btn() {
+  return {
+    padding: "8px 12px",
+    borderRadius: 12,
+    background: "rgba(255,255,255,0.1)",
+    color: "#fff",
+    border: "1px solid rgba(255,255,255,0.2)",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.4)",
+    cursor: "pointer"
+  };
+}
+function primaryBtn() {
+  return {
+    padding: "8px 12px",
+    borderRadius: 12,
+    background: "#16a34a",
+    color: "#fff",
+    border: "1px solid #16a34a",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+    cursor: "pointer"
+  };
+}
+function pill() {
+  return {
+    padding: "6px 10px",
+    borderRadius: 16,
+    background: "rgba(255,255,255,0.1)",
+    color: "#fff",
+    border: "1px solid rgba(255,255,255,0.2)"
+  };
+}
 
-// ===== Minimal self-tests =====
+// ===== Minimal self-tests (任意) =====
 export function _tests() {
   const out = [];
   const approx = (a, b, tol = 300) => Math.abs(a - b) <= tol;
-  out.push({ name: "haversine zero", ok: haversineKm([0,0],[0,0]) === 0 });
+  out.push({ name: "haversine zero", ok: haversineKm([0, 0], [0, 0]) === 0 });
   out.push({ name: "tokyo-paris", ok: approx(haversineKm([35.6762,139.6503],[48.8566,2.3522]), 9712) });
-  const s1 = seededShuffle([1,2,3,4,5], 'abc').join(','), s2 = seededShuffle([1,2,3,4,5], 'abc').join(','), s3 = seededShuffle([1,2,3,4,5], 'xyz').join(',');
+  const s1 = seededShuffle([1,2,3,4,5], "abc").join(","),
+        s2 = seededShuffle([1,2,3,4,5], "abc").join(","),
+        s3 = seededShuffle([1,2,3,4,5], "xyz").join(",");
   out.push({ name: "seeded stable", ok: s1 === s2 });
   out.push({ name: "seeded different", ok: s1 !== s3 });
-  const norm = normalizeQuestions([{ name: 'X', lat: 1, lon: 2, hint: 'h' }]);
-  out.push({ name: "normalize shape", ok: Array.isArray(norm[0].coord) && typeof norm[0].hint === 'string' });
-  const u1 = buildShareUrl({ seed: 's', dur: 60, km: 300, music: 'on', song: undefined });
-  out.push({ name: "share url no song", ok: !u1.includes('song=') });
-  const base = [1,2,3]; const before = base.join(','); seededShuffle(base, 'seed'); const after = base.join(',');
+  const norm = normalizeQuestions([{ name: "X", lat: 1, lon: 2, hint: "h" }]);
+  out.push({ name: "normalize shape", ok: Array.isArray(norm[0].coord) && typeof norm[0].hint === "string" });
+  const u1 = buildShareUrl({ seed: "s", dur: 60, km: 300, music: "on", song: undefined });
+  out.push({ name: "share url no song", ok: !u1.includes("song=") });
+  const base = [1,2,3]; const before = base.join(","); seededShuffle(base, "seed"); const after = base.join(",");
   out.push({ name: "seeded no-mutation", ok: before === after });
-  const resolved = resolveMusicUrl('?song=https://x.example/test.mp3', 'fallback');
-  out.push({ name: "resolveMusicUrl override", ok: resolved.startsWith('https://x.example/') });
+  const resolved = resolveMusicUrl("?song=https://x.example/test.mp3","fallback");
+  out.push({ name: "resolveMusicUrl override", ok: resolved.startsWith("https://x.example/") });
   return out;
 }
 
