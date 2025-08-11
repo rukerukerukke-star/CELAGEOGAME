@@ -11,9 +11,9 @@ import Globe from "react-globe.gl";
 import * as THREE from "three";
 
 // ==== Audio URL helpers ====
-export const DEFAULT_MUSIC_URL = "/sera-geo.mp3"; // /public 配下に設置
-export const DEFAULT_OK_URL    = "/ok.mp3";
-export const DEFAULT_NG_URL    = "/ng.mp3";
+export const DEFAULT_MUSIC_URL = "/sera-geo.mp3";  // /public 配下に設置
+export const DEFAULT_OK_URL    = "/correct.mp3";   // 正解SE
+export const DEFAULT_NG_URL    = "/wrong.mp3";     // 不正解SE
 
 function paramString() {
   try { return typeof window !== "undefined" ? window.location.search : ""; }
@@ -26,10 +26,19 @@ function getParam(name, fallback = null) {
   } catch { return fallback; }
 }
 function resolveSongUrl(defaultUrl) {
-  // ?song= でBGM変更、?ok= ?ng= で効果音変更
-  const key = defaultUrl === DEFAULT_MUSIC_URL ? "song" :
-              defaultUrl === DEFAULT_OK_URL    ? "ok"   : "ng";
-  return getParam(key, defaultUrl);
+  // BGM: ?song=
+  // 正解SE:  ?correct=  または  ?ok=
+  // 不正解SE: ?wrong=    または  ?ng=
+  if (defaultUrl === DEFAULT_MUSIC_URL) {
+    return getParam("song", defaultUrl);
+  }
+  if (defaultUrl === DEFAULT_OK_URL) {
+    return getParam("correct", getParam("ok", defaultUrl));
+  }
+  if (defaultUrl === DEFAULT_NG_URL) {
+    return getParam("wrong", getParam("ng", defaultUrl));
+  }
+  return defaultUrl;
 }
 function buildShareUrl({ seed, dur, km, music, song }) {
   const base = typeof window !== "undefined"
@@ -62,7 +71,7 @@ function mulberry32(a){return function(){let t=(a+=0x6d2b79f5);t=Math.imul(t^(t>
 function seededShuffle(arr, seedStr="default"){ const seed=xmur3(seedStr)(); const rand=mulberry32(seed); const a=arr.slice();
   for(let i=a.length-1;i>0;i--){ const j=Math.floor(rand()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
-// ===== Questions (省略せずそのまま) =====
+// ===== Questions =====
 const RAW = [
   { name: "ニューヨーク", lat: 40.7128, lon: -74.006, hint: "都市・アメリカ" },
   { name: "東京", lat: 35.6762, lon: 139.6503, hint: "日本の首都" },
@@ -218,6 +227,17 @@ export default function App() {
     if (ngRef.current)  ngRef.current.volume  = 0.9;
   }, [volume]);
 
+  // BGM 再生・停止
+  useEffect(() => {
+    const bgm = bgmRef.current;
+    if (!bgm) return;
+    if (musicOn && started) {
+      try { bgm.play(); } catch {}
+    } else {
+      try { bgm.pause(); } catch {}
+    }
+  }, [musicOn, started]);
+
   // ===== Auto-rotate control =====
   useEffect(() => {
     const controls = globeRef.current?.controls?.();
@@ -243,7 +263,7 @@ export default function App() {
     setScore(0); setAnswered(0); setCorrect(0);
     setQIndex(0); setGuess(null); setResult(null);
 
-    // BGM再生（ユーザー操作内で同期的に投げる）
+    // BGM再生（ユーザー操作内）
     const bgm = bgmRef.current;
     if (bgm) {
       bgm.src = MUSIC_URL; bgm.loop = true; bgm.volume = volume;
@@ -254,8 +274,6 @@ export default function App() {
   function endGame() {
     setStarted(false);
     setGameOver(true);
-    // BGMはそのまま流す。止めたいなら下のコメント解除
-    // try { bgmRef.current?.pause(); } catch {}
   }
 
   // ===== Timer =====
@@ -340,7 +358,7 @@ export default function App() {
 
   const arcs = useMemo(() => {
     if (!result || !guess || result.qId !== current.id) return [];
-    return [{ startLat: guess[0], startLng: guess[1], endLat: current.coord[0], endLng: current.coord[1] }];
+    return [{ startLat: guess[0], startLng: guess[1], endLat: current.coord[0], endLng: current.coord[1] }]];
   }, [guess, result, current]);
 
   // ===== Globe textures =====
@@ -349,9 +367,8 @@ export default function App() {
   const globeMat = useMemo(() => new THREE.MeshPhongMaterial({ color: 0x87b5e5, specular: 0x333333, shininess: 5 }), []);
 
   // ===== Responsive sizes =====
-  const headerH = 56; // px
-  const bottomH = 56; // px
-  // iOSのURLバーに強い svh を優先、fallbackにvh
+  const headerH = 56;
+  const bottomH = 56;
   const globeHeight = "min(70svh, 68vh)";
 
   return (
@@ -374,12 +391,12 @@ export default function App() {
         @media (min-width: 700px){ .hide-on-mobile { display: inline-flex; } }
       `}</style>
 
-      {/* ====== Audios ====== */}
+      {/* Audios */}
       <audio ref={bgmRef} src={MUSIC_URL} loop preload="auto" playsInline crossOrigin="anonymous" />
       <audio ref={okRef}  src={OK_URL} preload="auto" playsInline crossOrigin="anonymous" />
       <audio ref={ngRef}  src={NG_URL} preload="auto" playsInline crossOrigin="anonymous" />
 
-      {/* ====== Header (コンパクトで崩れない) ====== */}
+      {/* Header */}
       <header style={{
         position: "sticky", top: 0, zIndex: 10,
         height: headerH, display: "flex", alignItems: "center",
@@ -400,7 +417,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* ====== Audio enable button (iOS対策) ====== */}
+      {/* Audio enable (iOS) */}
       {!audioReady && (
         <div style={{ position:'fixed', right: 12, top: headerH + 8, zIndex: 20,
           background:'rgba(0,0,0,.75)', color:'#fff', padding:'10px 12px', borderRadius:12,
@@ -410,10 +427,9 @@ export default function App() {
         </div>
       )}
 
-      {/* ====== Main ====== */}
+      {/* Main */}
       <div style={{ maxWidth: 1120, margin: "0 auto", padding: "8px 12px" }}>
         <div style={{ position:"relative", height: globeHeight, borderRadius: 16, overflow: "hidden" }}>
-          {/* スタート前の中央タイトル（必ず真ん中に出す） */}
           {!started && !gameOver && (
             <div style={{
               position: "absolute", inset: 0, zIndex: 9,
@@ -430,7 +446,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ゲーム中の問題バナー（必ず最前面） */}
           {started && (
             <div style={{
               position: 'absolute', top: 8, left: 8, right: 8, zIndex: 9,
@@ -451,7 +466,6 @@ export default function App() {
             </div>
           )}
 
-          {/* 正解／不正解フラッシュ */}
           {result && result.qId === current?.id && (
             <div style={{ position:'absolute', inset:0, zIndex: 11,
               display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
@@ -466,7 +480,6 @@ export default function App() {
             </div>
           )}
 
-          {/* タイムアップの巨大スコア表示 */}
           {gameOver && (
             <div style={{ position:'absolute', inset:0, zIndex: 12,
               display:'flex', alignItems:'center', justifyContent:'center',
@@ -481,13 +494,12 @@ export default function App() {
                   SCORE: {score}
                 </div>
                 <div style={{ color:'#cbd5e1', marginTop:8, fontSize:14 }}>
-                  正解 {correct}／解答 {answered}　（スタートで再挑戦）
+                  正解 {correct}／解答 {answered}（スタートで再挑戦）
                 </div>
               </div>
             </div>
           )}
 
-          {/* === Globe === */}
           <Globe
             ref={globeRef}
             onGlobeClick={handleGlobeClick}
@@ -511,7 +523,6 @@ export default function App() {
           />
         </div>
 
-        {/* 下に小さな結果カード（ゲーム中のみ非表示にしない） */}
         {!started && !gameOver && answered > 0 && (
           <div style={{
             marginTop: 12, background: "rgba(255,255,255,0.06)", borderRadius: 12,
@@ -526,7 +537,7 @@ export default function App() {
         )}
       </div>
 
-      {/* ====== Bottom Bar（モバイル操作しやすい） ====== */}
+      {/* Bottom bar */}
       <div style={{
         position: "fixed", left: 0, right: 0, bottom: 0, height: bottomH,
         background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)",
@@ -557,5 +568,5 @@ export default function App() {
 function btn(){ return { padding:"8px 12px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:'#fff', border:"1px solid rgba(255,255,255,0.2)", boxShadow:"0 1px 2px rgba(0,0,0,0.4)" }; }
 function primaryBtn(){ return { padding:"8px 12px", borderRadius:12, background:"#16a34a", color:"#fff", border:"1px solid #16a34a", boxShadow:"0 2px 8px rgba(0,0,0,0.4)" }; }
 
-// ===== optional exports for tests =====
+// exports for tests (optional)
 export { haversineKm, seededShuffle, buildShareUrl };
