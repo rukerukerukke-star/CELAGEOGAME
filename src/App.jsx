@@ -5,15 +5,16 @@ const AUTO_FOCUS_ON_QUESTION   = false;  // 問題切替で自動フォーカス
 const INCORRECT_PAUSE_MS       = 1000;   // 不正解後に1秒静止して次へ
 const GAME_DURATION_DEFAULT    = 60;     // デフォゲーム時間
 const PASS_KM_DEFAULT          = 300;    // 何km以内で正解とするか
+const LEADERBOARD_KEY          = "sera-geo-top3"; // トップ3保存キー
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Globe from "react-globe.gl";
 import * as THREE from "three";
 
 // ==== Audio URL helpers ====
-export const DEFAULT_MUSIC_URL = "/sera-geo.mp3";  // /public 配下に設置
-export const DEFAULT_OK_URL    = "/correct.mp3";   // 正解SE
-export const DEFAULT_NG_URL    = "/wrong.mp3";     // 不正解SE
+export const DEFAULT_MUSIC_URL = "/sera-geo.mp3"; // /public 配下に設置
+export const DEFAULT_OK_URL    = "/correct.mp3";   // 正解
+export const DEFAULT_NG_URL    = "/wrong.mp3";     // 不正解
 
 function paramString() {
   try { return typeof window !== "undefined" ? window.location.search : ""; }
@@ -26,19 +27,11 @@ function getParam(name, fallback = null) {
   } catch { return fallback; }
 }
 function resolveSongUrl(defaultUrl) {
-  // BGM: ?song=
-  // 正解SE:  ?correct=  または  ?ok=
-  // 不正解SE: ?wrong=    または  ?ng=
-  if (defaultUrl === DEFAULT_MUSIC_URL) {
-    return getParam("song", defaultUrl);
-  }
-  if (defaultUrl === DEFAULT_OK_URL) {
-    return getParam("correct", getParam("ok", defaultUrl));
-  }
-  if (defaultUrl === DEFAULT_NG_URL) {
-    return getParam("wrong", getParam("ng", defaultUrl));
-  }
-  return defaultUrl;
+  // ?song= でBGM変更、?correct= ?wrong= で効果音変更
+  const key = defaultUrl === DEFAULT_MUSIC_URL ? "song"
+            : defaultUrl === DEFAULT_OK_URL    ? "correct"
+            : "wrong";
+  return getParam(key, defaultUrl);
 }
 function buildShareUrl({ seed, dur, km, music, song }) {
   const base = typeof window !== "undefined"
@@ -73,31 +66,40 @@ function seededShuffle(arr, seedStr="default"){ const seed=xmur3(seedStr)(); con
 
 // ===== Questions =====
 const RAW = [
-  { name: "ニューヨーク", lat: 40.7128, lon: -74.006, hint: "都市・アメリカ" },
+  // --- 都市（既存） ---
+  { name: "ニューヨーク", lat: 40.7128, lon: -74.0060, hint: "都市・アメリカ" },
   { name: "東京", lat: 35.6762, lon: 139.6503, hint: "日本の首都" },
   { name: "ロンドン", lat: 51.5074, lon: -0.1278, hint: "イギリスの首都" },
   { name: "サンフランシスコ", lat: 37.7749, lon: -122.4194, hint: "都市・アメリカ西海岸" },
   { name: "シンガポール", lat: 1.3521, lon: 103.8198, hint: "都市国家・東南アジア" },
   { name: "イスタンブール", lat: 41.0082, lon: 28.9784, hint: "都市・トルコ（欧亜境界）" },
   { name: "ドバイ", lat: 25.276987, lon: 55.296249, hint: "都市・UAE" },
+
+  // --- ランドマーク（既存） ---
   { name: "エッフェル塔", lat: 48.8584, lon: 2.2945, hint: "ランドマーク・パリ" },
   { name: "自由の女神", lat: 40.6892, lon: -74.0445, hint: "ランドマーク・NY" },
+
+  // --- 河川・自然 ---
   { name: "ナイル川", lat: 30.0444, lon: 31.2357, hint: "河川・アフリカ" },
   { name: "サハラ砂漠", lat: 23.4162, lon: 25.6628, hint: "砂漠・アフリカ北部" },
   { name: "グランドキャニオン", lat: 36.1069, lon: -112.1129, hint: "峡谷・アメリカ" },
   { name: "ヨセミテ国立公園", lat: 37.8651, lon: -119.5383, hint: "国立公園・アメリカ" },
-  { name: "フィヨルド（ガイランゲル）", lat: 62.1015, lon: 7.205, hint: "氷食地形・ノルウェー" },
+  { name: "フィヨルド（ガイランゲル）", lat: 62.1015, lon: 7.2050, hint: "氷食地形・ノルウェー" },
   { name: "ガラパゴス諸島", lat: -0.9538, lon: -90.9656, hint: "諸島・エクアドル" },
   { name: "セレンゲティ国立公園", lat: -2.3333, lon: 34.8333, hint: "サバンナ・タンザニア" },
   { name: "イグアスの滝", lat: -25.6953, lon: -54.4367, hint: "滝・アルゼンチン/ブラジル" },
   { name: "ハロン湾", lat: 20.9101, lon: 107.1839, hint: "湾・ベトナム" },
-  { name: "パンタナール", lat: -16.711, lon: -56.162, hint: "湿地・ブラジル" },
-  { name: "エベレスト山", lat: 27.9881, lon: 86.925, hint: "世界最高峰・ヒマラヤ" },
+  { name: "パンタナール", lat: -16.7110, lon: -56.1620, hint: "湿地・ブラジル" },
+
+  // --- 山岳 ---
+  { name: "エベレスト山", lat: 27.9881, lon: 86.9250, hint: "世界最高峰・ヒマラヤ" },
   { name: "富士山", lat: 35.3606, lon: 138.7274, hint: "日本・本州" },
   { name: "アンデス山脈", lat: -32.6532, lon: -70.0114, hint: "南米西部を縦断" },
   { name: "キリマンジャロ山", lat: -3.0674, lon: 37.3556, hint: "アフリカ最高峰・タンザニア" },
   { name: "モンブラン", lat: 45.8326, lon: 6.8652, hint: "アルプス・仏伊国境" },
-  { name: "ナイジェリア", lat: 9.082, lon: 8.6753, hint: "国・アフリカ" },
+
+  // --- 国 ---
+  { name: "ナイジェリア", lat: 9.0820, lon: 8.6753, hint: "国・アフリカ" },
   { name: "南アフリカ", lat: -30.5595, lon: 22.9375, hint: "国・アフリカ南端" },
   { name: "ケニア", lat: -1.286389, lon: 36.817223, hint: "国・東アフリカ" },
   { name: "エジプト", lat: 26.820553, lon: 30.802498, hint: "国・北アフリカ" },
@@ -122,33 +124,41 @@ const RAW = [
   { name: "バチカン市国", lat: 41.902782, lon: 12.453391, hint: "国・欧州の小国" },
   { name: "モナコ", lat: 43.738416, lon: 7.424621, hint: "国・欧州の小国" },
   { name: "ナウル", lat: -0.522778, lon: 166.931111, hint: "国・オセアニア小国" },
+
+  // --- 湖・海 ---
   { name: "バイカル湖", lat: 53.5587, lon: 108.1652, hint: "湖・ロシア" },
   { name: "カスピ海", lat: 37.5, lon: 50.0, hint: "内海・ユーラシア" },
   { name: "ティティカカ湖", lat: -15.7652, lon: -69.5312, hint: "湖・ボリビア/ペルー" },
+
+  // --- 建造物・遺跡 ---
   { name: "ギザの大ピラミッド", lat: 29.9792, lon: 31.1342, hint: "エジプト・ギザ" },
   { name: "タージ・マハル", lat: 27.1751, lon: 78.0421, hint: "インド・アグラ" },
   { name: "コロッセオ", lat: 41.8902, lon: 12.4922, hint: "イタリア・ローマ" },
   { name: "サグラダ・ファミリア", lat: 41.4036, lon: 2.1744, hint: "スペイン・バルセロナ" },
   { name: "ストーンヘンジ", lat: 51.1789, lon: -1.8262, hint: "イギリス・遺跡" },
   { name: "万里の長城", lat: 40.4319, lon: 116.5704, hint: "中国・長城" },
-  { name: "クレムリン", lat: 55.752, lon: 37.6173, hint: "ロシア・モスクワ" },
-  { name: "モン・サン＝ミシェル", lat: 48.636, lon: -1.5116, hint: "フランス・修道院" },
+  { name: "クレムリン", lat: 55.7520, lon: 37.6173, hint: "ロシア・モスクワ" },
+  { name: "モン・サン＝ミシェル", lat: 48.6360, lon: -1.5116, hint: "フランス・修道院" },
   { name: "オペラハウス", lat: -33.8568, lon: 151.2153, hint: "オーストラリア・シドニー" },
-  { name: "アンコール・ワット", lat: 13.4125, lon: 103.867, hint: "カンボジア・寺院" },
+  { name: "アンコール・ワット", lat: 13.4125, lon: 103.8670, hint: "カンボジア・寺院" },
   { name: "パルテノン神殿", lat: 37.9715, lon: 23.7267, hint: "ギリシャ・アテネ" },
   { name: "ブルジュ・ハリファ", lat: 25.1972, lon: 55.2744, hint: "UAE・世界一高い塔" },
   { name: "アルハンブラ宮殿", lat: 37.1761, lon: -3.5881, hint: "スペイン・グラナダ" },
-  { name: "ノートルダム大聖堂", lat: 48.853, lon: 2.3499, hint: "フランス・パリ" },
+  { name: "ノートルダム大聖堂", lat: 48.8530, lon: 2.3499, hint: "フランス・パリ" },
+
+  // --- 世界遺産 ---
   { name: "グレート・バリア・リーフ", lat: -18.2871, lon: 147.6992, hint: "世界最大のサンゴ礁" },
   { name: "古代ローマの遺跡", lat: 41.8902, lon: 12.4922, hint: "ローマ史跡群" },
   { name: "アヤソフィア", lat: 41.0082, lon: 28.9784, hint: "トルコ・イスタンブール" },
-  { name: "マチュ・ピチュ", lat: -13.1631, lon: -72.545, hint: "ペルー・空中都市" },
+  { name: "マチュ・ピチュ", lat: -13.1631, lon: -72.5450, hint: "ペルー・空中都市" },
   { name: "ペトラ", lat: 30.3285, lon: 35.4444, hint: "ヨルダン・岩窟遺跡" },
   { name: "ウフィツィ美術館", lat: 43.7695, lon: 11.2558, hint: "イタリア・フィレンツェ" },
   { name: "シーギリヤ", lat: 7.9572, lon: 80.7603, hint: "スリランカ・ライオンロック" },
   { name: "アブ・シンベル神殿", lat: 22.3372, lon: 31.6209, hint: "エジプト・大神殿" },
   { name: "エルミタージュ美術館", lat: 59.9343, lon: 30.3351, hint: "ロシア・サンクトペテルブルク" },
-  { name: "ナスカの地上絵", lat: -14.739, lon: -75.13, hint: "ペルー・地上絵" }
+
+  // --- その他 ---
+  { name: "ナスカの地上絵", lat: -14.7390, lon: -75.1300, hint: "ペルー・地上絵" },
 ];
 function normalizeQuestions(raw){ return raw.map((r,idx)=>({ id:idx+1, name:r.name, hint:r.hint||"", coord:[r.lat,r.lon] })); }
 const QUESTIONS = normalizeQuestions(RAW);
@@ -191,6 +201,11 @@ export default function App() {
   const [answered, setAnswered] = useState(0);
   const [correct, setCorrect] = useState(0);
 
+  const [top3, setTop3] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || "[]"); }
+    catch { return []; }
+  });
+
   const current = order[qIndex % order.length];
 
   // ===== Audio Unlock =====
@@ -220,23 +235,12 @@ export default function App() {
     };
   }, [audioReady]);
 
-  // ===== Audio volume / on-off =====
+  // ===== Audio volume =====
   useEffect(() => {
     if (bgmRef.current) bgmRef.current.volume = Math.max(0, Math.min(1, volume));
     if (okRef.current)  okRef.current.volume  = 0.9;
     if (ngRef.current)  ngRef.current.volume  = 0.9;
   }, [volume]);
-
-  // BGM 再生・停止
-  useEffect(() => {
-    const bgm = bgmRef.current;
-    if (!bgm) return;
-    if (musicOn && started) {
-      try { bgm.play(); } catch {}
-    } else {
-      try { bgm.pause(); } catch {}
-    }
-  }, [musicOn, started]);
 
   // ===== Auto-rotate control =====
   useEffect(() => {
@@ -263,17 +267,26 @@ export default function App() {
     setScore(0); setAnswered(0); setCorrect(0);
     setQIndex(0); setGuess(null); setResult(null);
 
-    // BGM再生（ユーザー操作内）
+    // BGM再生
     const bgm = bgmRef.current;
     if (bgm) {
       bgm.src = MUSIC_URL; bgm.loop = true; bgm.volume = volume;
       if (musicOn) { try { bgm.currentTime = 0; bgm.play(); } catch {} }
     }
+
+    // 最初の問題を少し寄せる（自動フォーカスOFFでも開始時は寄せてOK）
+    const first = newOrder[0];
+    if (first) focusOn(first.coord);
   }
 
   function endGame() {
     setStarted(false);
     setGameOver(true);
+
+    // トップ3更新
+    const next = [...top3, score].sort((a,b)=>b-a).slice(0,3);
+    setTop3(next);
+    try { localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(next)); } catch {}
   }
 
   // ===== Timer =====
@@ -358,7 +371,7 @@ export default function App() {
 
   const arcs = useMemo(() => {
     if (!result || !guess || result.qId !== current.id) return [];
-    return [{ startLat: guess[0], startLng: guess[1], endLat: current.coord[0], endLng: current.coord[1] }]];
+    return [{ startLat: guess[0], startLng: guess[1], endLat: current.coord[0], endLng: current.coord[1] }];
   }, [guess, result, current]);
 
   // ===== Globe textures =====
@@ -367,8 +380,8 @@ export default function App() {
   const globeMat = useMemo(() => new THREE.MeshPhongMaterial({ color: 0x87b5e5, specular: 0x333333, shininess: 5 }), []);
 
   // ===== Responsive sizes =====
-  const headerH = 56;
-  const bottomH = 56;
+  const headerH = 56; // px
+  const bottomH = 56; // px
   const globeHeight = "min(70svh, 68vh)";
 
   return (
@@ -391,12 +404,12 @@ export default function App() {
         @media (min-width: 700px){ .hide-on-mobile { display: inline-flex; } }
       `}</style>
 
-      {/* Audios */}
+      {/* ====== Audios ====== */}
       <audio ref={bgmRef} src={MUSIC_URL} loop preload="auto" playsInline crossOrigin="anonymous" />
       <audio ref={okRef}  src={OK_URL} preload="auto" playsInline crossOrigin="anonymous" />
       <audio ref={ngRef}  src={NG_URL} preload="auto" playsInline crossOrigin="anonymous" />
 
-      {/* Header */}
+      {/* ====== Header ====== */}
       <header style={{
         position: "sticky", top: 0, zIndex: 10,
         height: headerH, display: "flex", alignItems: "center",
@@ -417,7 +430,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Audio enable (iOS) */}
+      {/* ====== Audio enable (iOS対策) ====== */}
       {!audioReady && (
         <div style={{ position:'fixed', right: 12, top: headerH + 8, zIndex: 20,
           background:'rgba(0,0,0,.75)', color:'#fff', padding:'10px 12px', borderRadius:12,
@@ -427,9 +440,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Main */}
+      {/* ====== Main ====== */}
       <div style={{ maxWidth: 1120, margin: "0 auto", padding: "8px 12px" }}>
         <div style={{ position:"relative", height: globeHeight, borderRadius: 16, overflow: "hidden" }}>
+          {/* スタート前の中央タイトル */}
           {!started && !gameOver && (
             <div style={{
               position: "absolute", inset: 0, zIndex: 9,
@@ -446,6 +460,7 @@ export default function App() {
             </div>
           )}
 
+          {/* ゲーム中の問題バナー */}
           {started && (
             <div style={{
               position: 'absolute', top: 8, left: 8, right: 8, zIndex: 9,
@@ -466,6 +481,7 @@ export default function App() {
             </div>
           )}
 
+          {/* 正解／不正解フラッシュ */}
           {result && result.qId === current?.id && (
             <div style={{ position:'absolute', inset:0, zIndex: 11,
               display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
@@ -480,6 +496,7 @@ export default function App() {
             </div>
           )}
 
+          {/* タイムアップの巨大スコア表示 */}
           {gameOver && (
             <div style={{ position:'absolute', inset:0, zIndex: 12,
               display:'flex', alignItems:'center', justifyContent:'center',
@@ -494,12 +511,23 @@ export default function App() {
                   SCORE: {score}
                 </div>
                 <div style={{ color:'#cbd5e1', marginTop:8, fontSize:14 }}>
-                  正解 {correct}／解答 {answered}（スタートで再挑戦）
+                  正解 {correct}／解答 {answered}　（スタートで再挑戦）
                 </div>
+
+                {/* トップ3 */}
+                {top3.length > 0 && (
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 あなたのトップ3</div>
+                    <ol style={{ margin: 0, paddingLeft: 18 }}>
+                      {top3.map((s, i) => <li key={i}>{s}</li>)}
+                    </ol>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
+          {/* === Globe === */}
           <Globe
             ref={globeRef}
             onGlobeClick={handleGlobeClick}
@@ -523,6 +551,7 @@ export default function App() {
           />
         </div>
 
+        {/* 下に小さな結果カード（待機時） */}
         {!started && !gameOver && answered > 0 && (
           <div style={{
             marginTop: 12, background: "rgba(255,255,255,0.06)", borderRadius: 12,
@@ -535,9 +564,22 @@ export default function App() {
             <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 6 }}>「スタート」で再チャレンジ！</div>
           </div>
         )}
+
+        {/* 待機時のトップ3 */}
+        {!started && !gameOver && top3.length > 0 && (
+          <div style={{
+            marginTop: 12, background: "rgba(255,255,255,0.06)", borderRadius: 12,
+            padding: 12, border: '1px solid rgba(255,255,255,0.08)', color: '#e2e8f0'
+          }}>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>🏆 あなたのトップ3</div>
+            <ol style={{ margin: 0, paddingLeft: 18 }}>
+              {top3.map((s, i) => <li key={i}>{s}</li>)}
+            </ol>
+          </div>
+        )}
       </div>
 
-      {/* Bottom bar */}
+      {/* ====== Bottom Bar ====== */}
       <div style={{
         position: "fixed", left: 0, right: 0, bottom: 0, height: bottomH,
         background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)",
@@ -568,5 +610,5 @@ export default function App() {
 function btn(){ return { padding:"8px 12px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:'#fff', border:"1px solid rgba(255,255,255,0.2)", boxShadow:"0 1px 2px rgba(0,0,0,0.4)" }; }
 function primaryBtn(){ return { padding:"8px 12px", borderRadius:12, background:"#16a34a", color:"#fff", border:"1px solid #16a34a", boxShadow:"0 2px 8px rgba(0,0,0,0.4)" }; }
 
-// exports for tests (optional)
+// ===== optional exports for tests =====
 export { haversineKm, seededShuffle, buildShareUrl };
