@@ -602,12 +602,12 @@ export default function App() {
                 <div style={{
                   fontWeight: 900, fontSize: 44, color: "#fff",
                   WebkitTextStroke: "2px #000", textShadow: "0 3px 8px rgba(0,0,0,.8)", marginBottom: 10
-                }}> セラ地理！<br>モードを選択</div>
-                <div className="mode-grid">
-                  {MODE_LIST.map(mode => (
-                    <button key={mode} onClick={() => selectMode(mode)} className="mode-btn">{mode}</button>
-                  ))}
-                </div>
+}}>セラ地理<br />モードを選択</div>
+<div className="mode-grid">
+  {MODE_LIST.map(mode => (
+    <button key={mode} onClick={() => selectMode(mode)} className="mode-btn">{mode}</button>
+  ))}
+</div>
                 <div style={{ marginTop:12, color:"#cbd5e1" }}>
                   選択後、下の「スタート」でゲーム開始！
                 </div>
