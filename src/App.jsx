@@ -1,6 +1,6 @@
 // App.jsx
 // === Sera-Geo: モード選択 + 本編統合 完成版 ===
-// - 7モード：オールイン / 世界の国・都市 / 世界の湖沼 / 世界の大河 / 世界の山脈・高原 / 世界の平野・盆地 / その他
+// - 8モード：オールイン / レギュラーモード / 世界の国・都市 / 世界の湖沼 / 世界の大河 / 世界の山脈・高原 / 世界の平野・盆地 / その他
 // - モード選択は地球儀の上に大きくオーバーレイ表示（スタート前は地球が回転）
 // - モード選択ボタンを押すと button.mp3 が鳴る
 // - BGM（sera-geo.mp3）は ゲーム中のみ 再生（音楽ON/OFF切替あり）
@@ -69,6 +69,12 @@ function mulberry32(a){return function(){let t=(a+=0x6d2b79f5);t=Math.imul(t^(t>
 function seededShuffle(arr, seedStr="default"){ const seed=xmur3(seedStr)(); const rand=mulberry32(seed); const a=arr.slice();
   for(let i=a.length-1;i>0;i--){ const j=Math.floor(rand()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
+// --- helper: データセットから名前で抜き出す ---
+function pickByNames(raw, names) {
+  const set = new Set(names);
+  return raw.filter(d => set.has(d.name));
+}
+
 // ===== Datasets =====
 // 正確さより「学習用の代表座標」を優先（広域は中央付近座標）
 // name / lat / lon / hint
@@ -115,6 +121,14 @@ const COUNTRIES_CITIES = [
   { name:"カイロ", lat:30.0444, lon:31.2357, hint:"エジプトの首都" }
 ];
 
+// === レギュラーモード用 “やさしめ” セット ===
+const EASY_COUNTRIES_CITIES_NAMES = [
+  // 国
+  "日本","中国","アメリカ合衆国","イギリス","フランス","ドイツ","インド","オーストラリア","ブラジル","エジプト",
+  // 都市
+  "東京","ロンドン","パリ","ニューヨーク","ソウル","北京","ニューデリー","シドニー","ローマ","カイロ"
+];
+
 // --- 世界の湖沼 ---
 const LAKES = [
   { name:"カスピ海", lat:41.7, lon:50.6, hint:"内海・ユーラシア" },
@@ -140,6 +154,9 @@ const LAKES = [
   { name:"タンガニーカ湖", lat:-6.0, lon:29.6, hint:"アフリカ大地溝帯" },
   { name:"マラウイ湖", lat:-12.3, lon:34.6, hint:"アフリカ大地溝帯" },
   { name:"エーヤル湖", lat:36.4, lon:138.6, hint:"（仮・学習用）" }
+];
+const EASY_LAKES_NAMES = [
+  "カスピ海","バイカル湖","スペリオル湖","ミシガン湖","エリー湖","オンタリオ湖","ヴィクトリア湖","タンガニーカ湖"
 ];
 
 // --- 世界の大河 ---
@@ -169,6 +186,9 @@ const RIVERS = [
   { name:"ドナウ川", lat:45.2, lon:29.7, hint:"黒海" },
   { name:"コロラド川", lat:31.8, lon:-114.8, hint:"カリフォルニア湾" }
 ];
+const EASY_RIVERS_NAMES = [
+  "ナイル川","アマゾン川","長江","ミシシッピ川","黄河","ヴォルガ川","ドナウ川","メコン川","ザンベジ川","コロラド川"
+];
 
 // --- 世界の山脈・高原 ---
 const MOUNTAINS_PLATEAUS = [
@@ -196,6 +216,9 @@ const MOUNTAINS_PLATEAUS = [
   { name:"エチオピア高原", lat:9.0, lon:39.0, hint:"東アフリカ" },
   { name:"ブラジル高原", lat:-16.0, lon:-50.0, hint:"南米中東部" }
 ];
+const EASY_MOUNTAINS_PLATEAUS_NAMES = [
+  "アルプス山脈","ヒマラヤ山脈","アンデス山脈","ロッキー山脈","ウラル山脈","アパラチア山脈","アトラス山脈","チベット高原"
+];
 
 // --- 世界の平野・盆地（広域は中央付近） ---
 const PLAINS_BASINS = [
@@ -217,6 +240,9 @@ const PLAINS_BASINS = [
   { name:"ヒンドスタン平原", lat:27.0, lon:77.0, hint:"インド北部" },
   { name:"コンゴ盆地", lat:-2.0, lon:23.0, hint:"中部アフリカ" },
   { name:"グレートアーディシアン盆地（大鑽井盆地）", lat:-24.0, lon:137.0, hint:"豪州内陸" }
+];
+const EASY_PLAINS_BASINS_NAMES = [
+  "グレートプレーンズ","東ヨーロッパ平原","中央平原","アマゾン盆地","華北平原","ヒンドスタン平原","西シベリア低地","パンパ"
 ];
 
 // --- その他（ランドマーク・世界遺産など） ---
@@ -248,10 +274,15 @@ const OTHERS = [
   { name:"エルミタージュ美術館", lat:59.9343, lon:30.3351, hint:"サンクトペテルブルク" },
   { name:"ナスカの地上絵", lat:-14.7390, lon:-75.1300, hint:"ペルー" }
 ];
+const EASY_OTHERS_NAMES = [
+  "エッフェル塔","自由の女神","ギザの大ピラミッド","タージ・マハル","コロッセオ","サグラダ・ファミリア",
+  "万里の長城","オペラハウス","マチュ・ピチュ","モン・サン＝ミシェル"
+];
 
 // ===== モード定義 =====
 const MODE_LIST = [
   "オールイン",
+  "レギュラーモード",
   "世界の国・都市",
   "世界の湖沼",
   "世界の大河",
@@ -273,6 +304,19 @@ function getQuestionsByMode(mode){
     "世界の平野・盆地": normalize(PLAINS_BASINS),
     "その他": normalize(OTHERS),
   };
+
+  if (mode === "レギュラーモード") {
+    const easy = [
+      ...pickByNames(COUNTRIES_CITIES, EASY_COUNTRIES_CITIES_NAMES),
+      ...pickByNames(LAKES, EASY_LAKES_NAMES),
+      ...pickByNames(RIVERS, EASY_RIVERS_NAMES),
+      ...pickByNames(MOUNTAINS_PLATEAUS, EASY_MOUNTAINS_PLATEAUS_NAMES),
+      ...pickByNames(PLAINS_BASINS, EASY_PLAINS_BASINS_NAMES),
+      ...pickByNames(OTHERS, EASY_OTHERS_NAMES),
+    ];
+    return normalize(easy);
+  }
+
   if (mode === "オールイン") {
     return normalize([
       ...COUNTRIES_CITIES,
@@ -602,12 +646,12 @@ export default function App() {
                 <div style={{
                   fontWeight: 900, fontSize: 44, color: "#fff",
                   WebkitTextStroke: "2px #000", textShadow: "0 3px 8px rgba(0,0,0,.8)", marginBottom: 10
-}}>セラ地理！<br />モードを選択</div>
-<div className="mode-grid">
-  {MODE_LIST.map(mode => (
-    <button key={mode} onClick={() => selectMode(mode)} className="mode-btn">{mode}</button>
-  ))}
-</div>
+                }}>セラ地理！<br />モードを選択</div>
+                <div className="mode-grid">
+                  {MODE_LIST.map(mode => (
+                    <button key={mode} onClick={() => selectMode(mode)} className="mode-btn">{mode}</button>
+                  ))}
+                </div>
                 <div style={{ marginTop:12, color:"#cbd5e1" }}>
                   選択後、下の「スタート」でゲーム開始！
                 </div>
