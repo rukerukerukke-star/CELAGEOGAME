@@ -14,7 +14,7 @@ const AUTO_ROTATE_IN_GAME      = false;  // ゲーム中は回さない
 const AUTO_FOCUS_ON_QUESTION   = false;  // 問題切替では自動寄せしない（不正解時のみ寄せる）
 const INCORRECT_PAUSE_MS       = 1000;   // 不正解後に1秒静止して次へ
 const GAME_DURATION_DEFAULT    = 60;     // デフォゲーム時間
-const PASS_KM_DEFAULT          = 300;    // 正解判定の距離しきい値（km）
+const PASS_KM_DEFAULT          = 400;    // 正解判定の距離しきい値（km）
 const LEADERBOARD_KEY          = "sera-geo-top3";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
