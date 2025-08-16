@@ -7,6 +7,9 @@
 // - 正解/不正解の効果音：correct.mp3 / wrong.mp3
 // - 不正解時は正解地点へ自動回転→1秒静止→次の問題
 // - 共有リンク生成、ローカルトップ3、iOSのオーディオ有効化対応
+// - クリア後の称号（250点刻み）を表示：
+//    0-249 方角方向オンチ / 250-499 地理は寝てた勢 / 500-749 地図帳は観賞用 / 750-999 夢の中で世界一周
+//    1000-1249 いつも地図帳持ち歩いてる人 / 1250-1499 グーグルアース中毒者 / 1500+ 歩く地球儀
 
 // ===== feature flags =====
 const AUTO_ROTATE_BEFORE_START = true;   // スタート前は地球を回す
@@ -290,6 +293,17 @@ const MODE_LIST = [
   "世界の平野・盆地",
   "その他"
 ];
+
+// ===== 称号判定（250点刻み） =====
+function titleForScore(score){
+  if (score >= 1500) return "歩く地球儀";
+  if (score >= 1250) return "グーグルアース中毒者";
+  if (score >= 1000) return "いつも地図帳持ち歩いてる人";
+  if (score >= 750)  return "夢の中で世界一周";
+  if (score >= 500)  return "地図帳は観賞用";
+  if (score >= 250)  return "地理は寝てた勢";
+  return "方角方向オンチ";
+}
 
 function normalize(raw){
   return raw.map((r,idx)=>({ id: idx+1, name:r.name, hint:r.hint || "", coord:[r.lat, r.lon] }));
@@ -646,7 +660,7 @@ export default function App() {
                 <div style={{
                   fontWeight: 900, fontSize: 44, color: "#fff",
                   WebkitTextStroke: "2px #000", textShadow: "0 3px 8px rgba(0,0,0,.8)", marginBottom: 10
-                }}>セラ地理！<br />モードを選択</div>
+                }}>セラ地理<br />モードの選択</div>
                 <div className="mode-grid">
                   {MODE_LIST.map(mode => (
                     <button key={mode} onClick={() => selectMode(mode)} className="mode-btn">{mode}</button>
@@ -709,6 +723,9 @@ export default function App() {
                 }}>
                   SCORE: {score}
                 </div>
+                <div style={{ color:'#cbd5e1', marginTop:8, fontSize:16 }}>
+                  あなたは <b>{titleForScore(score)}</b> です
+                </div>
                 <div style={{ color:'#cbd5e1', marginTop:8, fontSize:14 }}>
                   正解 {correct}／解答 {answered}
                 </div>
@@ -720,6 +737,9 @@ export default function App() {
                     <ol style={{ margin: 0, paddingLeft: 18 }}>
                       {top3.map((s, i) => <li key={i}>{s}</li>)}
                     </ol>
+                    <div style={{ marginTop:8 }}>
+                      あなたの称号: <b>{titleForScore(score)}</b>（{selectedMode}）
+                    </div>
                   </div>
                 )}
 
@@ -767,6 +787,7 @@ export default function App() {
             <div style={{ fontSize: 14 }}>
               正解：<b>{correct}</b> / 解答：<b>{answered}</b> ／ スコア：<b>{score}</b>
             </div>
+            <div style={{ marginTop:6, fontSize:14 }}>あなたは <b>{titleForScore(score)}</b> です</div>
             <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 6 }}>モードを選んで「スタート」で再チャレンジ！</div>
           </div>
         )}
@@ -781,6 +802,11 @@ export default function App() {
             <ol style={{ margin: 0, paddingLeft: 18 }}>
               {top3.map((s, i) => <li key={i}>{s}</li>)}
             </ol>
+            {answered > 0 && (
+              <div style={{ marginTop:8 }}>
+                あなたの称号: <b>{titleForScore(score)}</b>（{selectedMode}）
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -830,3 +856,15 @@ function primaryBtn(){ return { padding:"8px 12px", borderRadius:12, background:
 
 // ===== optional exports =====
 export { haversineKm, seededShuffle, buildShareUrl };
+
+// ===== lightweight self tests (console) =====
+function __selfTests(){
+  try {
+    const d = Math.round(haversineKm([0,0],[0,1]));
+    console.assert(Math.abs(d - 111) <= 2, "haversineKm ~111km per 1° lon at equator, got", d);
+    const url = buildShareUrl({seed:1,dur:60,km:400,music:'on',mode:'オールイン'});
+    console.assert(url.includes('seed=1') && url.includes('dur=60') && url.includes('km=400') && url.includes('music=on') && url.includes('mode=%E3%82%AA%E3%83%BC%E3%83%AB%E3%82%A4%E3%83%B3'), 'buildShareUrl encodes params');
+    console.assert(titleForScore(0)==='方角方向オンチ' && titleForScore(250)==='地理は寝てた勢' && titleForScore(500)==='地図帳は観賞用' && titleForScore(750)==='夢の中で世界一周' && titleForScore(1000)==='いつも地図帳持ち歩いてる人' && titleForScore(1250)==='グーグルアース中毒者' && titleForScore(1500)==='歩く地球儀', 'titleForScore ladder ok');
+  } catch(e){ console.warn('self tests error', e); }
+}
+if (typeof window !== 'undefined') { setTimeout(__selfTests, 0); }
