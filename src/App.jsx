@@ -667,16 +667,7 @@ export default function App() {
         background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(255,255,255,.08)"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ 
-            fontFamily: "'Orbitron', 'Noto Sans JP', sans-serif", 
-            fontWeight: 900, fontSize: 24, 
-            background: "linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            textShadow: "none",
-            filter: "drop-shadow(0 2px 8px rgba(96,165,250,.4))"
-          }}>セラ地理</div>
+          <img src="/sera-geo-earth-logo.png" alt="セラ地理アース" style={{ height: 40, width: "auto", filter: "drop-shadow(0 2px 8px rgba(96,165,250,.4))" }} />
           <div className="hide-on-mobile" style={{ fontSize: 13, color: "#e0e7ff", fontWeight: 500 }}>
             正解: <b style={{color:"#86efac"}}>{correct}</b> / 解答: <b style={{color:"#93c5fd"}}>{answered}</b> ／ 残り <b style={{color:"#fbbf24"}}>{started ? timeLeft : params.dur}s</b> ／ モード：<b style={{color:"#c4b5fd"}}>{selectedMode}</b>
           </div>
@@ -699,18 +690,22 @@ export default function App() {
               textAlign: "center"
             }}>
               <div style={{ pointerEvents:"auto", maxWidth: 880, width: "92%" }}>
-                <div style={{
-                  fontFamily: "'Orbitron', 'Noto Sans JP', sans-serif",
-                  fontWeight: 900, fontSize: "clamp(24px, 6vw, 48px)", 
-                  background: "linear-gradient(135deg, #60a5fa 0%, #a78bfa 40%, #f472b6 70%, #fbbf24 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  filter: "drop-shadow(0 4px 12px rgba(96,165,250,.6)) drop-shadow(0 0 30px rgba(139,92,246,.4))",
-                  marginBottom: "clamp(12px, 3vw, 20px)",
-                  animation: "glow 3s ease-in-out infinite",
-                  lineHeight: 1.2
-                }}>セラ地理<br />モードの選択</div>
+                <div style={{ marginBottom: "clamp(12px, 3vw, 20px)", display: "flex", justifyContent: "center" }}>
+                  <img src="/sera-geo-earth-logo.png" alt="セラ地理アース" style={{ 
+                    maxWidth: "min(600px, 90vw)", 
+                    height: "auto",
+                    filter: "drop-shadow(0 8px 24px rgba(96,165,250,.6)) drop-shadow(0 0 40px rgba(139,92,246,.4))",
+                    animation: "float 3s ease-in-out infinite"
+                  }} />
+                </div>
+                <div style={{ 
+                  fontSize: "clamp(11px, 2vw, 14px)", 
+                  color: "#cbd5e1", 
+                  textAlign: "center", 
+                  marginBottom: "clamp(10px, 2.5vw, 16px)",
+                  opacity: 0.7,
+                  fontWeight: 500
+                }}>モードを選択</div>
                 <div className="mode-grid">
                   {MODE_LIST.map(mode => (
                     <button key={mode} onClick={() => selectMode(mode)} className="mode-btn">{mode}</button>

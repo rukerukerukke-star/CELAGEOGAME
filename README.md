@@ -1,4 +1,4 @@
-# セラ地理（React + Vite）
+# セラ地理アース（Cela Geo Earth）（React + Vite）
 作成日: 2025-08-09
 
 ## セットアップ
