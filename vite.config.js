@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// If you deploy at a subpath (e.g., GitHub Pages), change base to '/<repo-name>/'
+// GitHub Pages用の設定
 export default defineConfig({
   plugins: [react()],
-  base: '/',
+  base: '/CELAGEOGAME/',
   server: {
     host: '0.0.0.0',
     port: 5173,
