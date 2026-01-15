@@ -296,12 +296,14 @@ const MODE_LIST = [
 
 // ===== 称号判定（250点刻み） =====
 function titleForScore(score){
+      if (score >= 1750) return "もう君がセラ地理";
+    if (score >= 1750) return "もはや地球";
   if (score >= 1500) return "歩く地球儀";
   if (score >= 1250) return "グーグルアース中毒者";
   if (score >= 1000) return "いつも地図帳持ち歩いてる人";
-  if (score >= 750)  return "夢の中で世界一周";
-  if (score >= 500)  return "地図帳は観賞用";
-  if (score >= 250)  return "地理は寝てた勢";
+  if (score >= 750)  return "地図帳は鍋敷きにしてます。";
+  if (score >= 500)  return "地図帳は観賞用で置いてます。";
+  if (score >= 250)  return "地理は寝てたました。";
   return "方角方向オンチ";
 }
 
