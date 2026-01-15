@@ -28,10 +28,12 @@ import Globe from "react-globe.gl";
 import * as THREE from "three";
 
 // ==== Audio files ====
-export const DEFAULT_MUSIC_URL   = "/sera-geo.mp3";
-export const DEFAULT_OK_URL      = "/correct.mp3";
-export const DEFAULT_NG_URL      = "/wrong.mp3";
-export const DEFAULT_BUTTON_URL  = "/button.mp3";
+// BASE_URLを使って正しいパスを生成（GitHub Pages対応）
+const getAssetUrl = (filename) => `${import.meta.env.BASE_URL}${filename}`;
+export const DEFAULT_MUSIC_URL   = getAssetUrl("sera-geo.mp3");
+export const DEFAULT_OK_URL      = getAssetUrl("correct.mp3");
+export const DEFAULT_NG_URL      = getAssetUrl("wrong.mp3");
+export const DEFAULT_BUTTON_URL  = getAssetUrl("button.mp3");
 
 // ==== URL params helpers ====
 function paramString() {
@@ -855,7 +857,7 @@ export default function App() {
         background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(255,255,255,.08)"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <img src="/sera-geo-earth-logo.png" alt="セラ地理アース" style={{ height: 40, width: "auto", filter: "drop-shadow(0 2px 8px rgba(96,165,250,.4))" }} />
+          <img src={`${import.meta.env.BASE_URL}sera-geo-earth-logo.png`} alt="セラ地理アース" style={{ height: 40, width: "auto", filter: "drop-shadow(0 2px 8px rgba(96,165,250,.4))" }} />
           <div className="hide-on-mobile" style={{ fontSize: 13, color: "#e0e7ff", fontWeight: 500 }}>
             正解: <b style={{color:"#86efac"}}>{correct}</b> / 解答: <b style={{color:"#93c5fd"}}>{answered}</b> ／ 残り <b style={{color:"#fbbf24"}}>{started ? timeLeft : params.dur}s</b> ／ モード：<b style={{color:"#c4b5fd"}}>{selectedMode}</b>
           </div>
@@ -880,7 +882,7 @@ export default function App() {
             }}>
               <div style={{ pointerEvents:"auto", maxWidth: 880, width: "92%" }}>
                 <div style={{ marginBottom: "clamp(12px, 3vw, 20px)", display: "flex", justifyContent: "center" }}>
-                  <img src="/sera-geo-earth-logo.png" alt="セラ地理アース" style={{ 
+                  <img src={`${import.meta.env.BASE_URL}sera-geo-earth-logo.png`} alt="セラ地理アース" style={{ 
                     maxWidth: "min(600px, 90vw)", 
                     height: "auto",
                     filter: "drop-shadow(0 8px 24px rgba(96,165,250,.6)) drop-shadow(0 0 40px rgba(139,92,246,.4))",
