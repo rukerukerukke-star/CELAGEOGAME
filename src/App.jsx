@@ -596,7 +596,7 @@ export default function App() {
   // ===== Responsive sizes =====
   const headerH = 56; // px
   const bottomH = 56; // px
-  const globeHeight = "min(70svh, 68vh)";
+  const globeHeight = "calc(100svh - 120px)"; // ヘッダーとボトムバーを除いた高さ
 
   return (
     <div style={{
@@ -680,7 +680,7 @@ export default function App() {
       </header>
 
       {/* ====== Main ====== */}
-      <div style={{ maxWidth: 1120, margin: "0 auto", padding: "8px 12px" }}>
+      <div style={{ maxWidth: 1120, margin: "0 auto", padding: "4px 8px", paddingBottom: `${bottomH + 8}px` }}>
         <div style={{ position:"relative", height: globeHeight, borderRadius: 16, overflow: "hidden" }}>
           {/* スタート前の中央タイトル・モード選択オーバーレイ */}
           {!started && !gameOver && (
