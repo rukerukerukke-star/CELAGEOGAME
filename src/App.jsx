@@ -601,22 +601,51 @@ export default function App() {
       minHeight: "100svh",
       color: "#e5f2ff",
       backgroundColor: "#000",
+      fontFamily: "'Noto Sans JP', sans-serif",
       backgroundImage:
-        "radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.8) 50%, transparent 51%),"+
-        "radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,.7) 50%, transparent 51%),"+
-        "radial-gradient(2px 2px at 80% 20%, rgba(255,255,255,.9) 50%, transparent 51%),"+
-        "radial-gradient(2px 2px at 60% 50%, rgba(255,255,255,.6) 50%, transparent 51%),"+
-        "radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,.8) 50%, transparent 51%),"+
-        "radial-gradient(ellipse at 50% 120%, #0b1d3a 0%, #000 70%)",
+        "radial-gradient(1px 1px at 20% 30%, rgba(147,197,253,.9) 50%, transparent 51%),"+
+        "radial-gradient(1px 1px at 40% 70%, rgba(196,181,253,.8) 50%, transparent 51%),"+
+        "radial-gradient(2px 2px at 80% 20%, rgba(165,180,252,1) 50%, transparent 51%),"+
+        "radial-gradient(2px 2px at 60% 50%, rgba(134,239,172,.7) 50%, transparent 51%),"+
+        "radial-gradient(1px 1px at 10% 80%, rgba(251,207,232,.8) 50%, transparent 51%),"+
+        "radial-gradient(1px 1px at 90% 60%, rgba(253,224,71,.7) 50%, transparent 51%),"+
+        "radial-gradient(ellipse at 50% 120%, #0f172a 0%, #000 70%)",
       paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)"
     }}>
       <style>{`
         @keyframes popIn { 0%{transform:scale(.8);opacity:0} 40%{opacity:1} 70%{transform:scale(1.06)} 100%{transform:scale(1)} }
+        @keyframes shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes glow { 0%,100%{text-shadow:0 0 20px rgba(96,165,250,.6), 0 0 40px rgba(139,92,246,.4)} 50%{text-shadow:0 0 30px rgba(96,165,250,.8), 0 0 60px rgba(139,92,246,.6)} }
         .hide-on-mobile { display: none; }
         @media (min-width: 700px){ .hide-on-mobile { display: inline-flex; } }
-        .mode-grid { display:grid; gap:10px; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); }
-        .mode-btn { font-weight:800; padding:14px 16px; border-radius:16px; background:#111827aa; color:#fff; border:1px solid rgba(255,255,255,.2); backdrop-filter: blur(4px); box-shadow:0 8px 18px rgba(0,0,0,.35); }
-        .mode-btn:hover { transform: translateY(-1px); }
+        .mode-grid { display:grid; gap:14px; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); }
+        .mode-btn { 
+          font-weight:700; padding:16px 20px; border-radius:20px; 
+          background: linear-gradient(135deg, rgba(99,102,241,.85) 0%, rgba(139,92,246,.85) 100%);
+          color:#fff; border:2px solid rgba(167,139,250,.4); 
+          backdrop-filter: blur(10px); 
+          box-shadow:0 10px 25px rgba(99,102,241,.3), inset 0 1px 0 rgba(255,255,255,.2);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+        }
+        .mode-btn::before {
+          content: '';
+          position: absolute;
+          top: 0; left: -100%;
+          width: 100%; height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+          transition: left 0.5s;
+        }
+        .mode-btn:hover::before { left: 100%; }
+        .mode-btn:hover { 
+          transform: translateY(-3px) scale(1.02); 
+          box-shadow:0 15px 35px rgba(99,102,241,.5), inset 0 1px 0 rgba(255,255,255,.3);
+          border-color: rgba(167,139,250,.7);
+        }
+        .mode-btn:active { transform: translateY(-1px) scale(0.98); }
       `}</style>
 
       {/* ====== Audios ====== */}
@@ -634,9 +663,18 @@ export default function App() {
         background: "rgba(0,0,0,.35)", borderBottom: "1px solid rgba(255,255,255,.08)"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontWeight: 900, fontSize: 22, color: "#fff", textShadow: "0 2px 6px rgba(0,0,0,.6)" }}>セラ地理</div>
-          <div className="hide-on-mobile" style={{ fontSize: 12, color: "#cbd5e1" }}>
-            正解: <b>{correct}</b> / 解答: <b>{answered}</b> ／ 残り <b>{started ? timeLeft : params.dur}s</b> ／ モード：<b>{selectedMode}</b>
+          <div style={{ 
+            fontFamily: "'Orbitron', 'Noto Sans JP', sans-serif", 
+            fontWeight: 900, fontSize: 24, 
+            background: "linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            textShadow: "none",
+            filter: "drop-shadow(0 2px 8px rgba(96,165,250,.4))"
+          }}>セラ地理</div>
+          <div className="hide-on-mobile" style={{ fontSize: 13, color: "#e0e7ff", fontWeight: 500 }}>
+            正解: <b style={{color:"#86efac"}}>{correct}</b> / 解答: <b style={{color:"#93c5fd"}}>{answered}</b> ／ 残り <b style={{color:"#fbbf24"}}>{started ? timeLeft : params.dur}s</b> ／ モード：<b style={{color:"#c4b5fd"}}>{selectedMode}</b>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -658,15 +696,22 @@ export default function App() {
             }}>
               <div style={{ pointerEvents:"auto", maxWidth: 880, width: "92%" }}>
                 <div style={{
-                  fontWeight: 900, fontSize: 44, color: "#fff",
-                  WebkitTextStroke: "2px #000", textShadow: "0 3px 8px rgba(0,0,0,.8)", marginBottom: 10
+                  fontFamily: "'Orbitron', 'Noto Sans JP', sans-serif",
+                  fontWeight: 900, fontSize: 48, 
+                  background: "linear-gradient(135deg, #60a5fa 0%, #a78bfa 40%, #f472b6 70%, #fbbf24 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  filter: "drop-shadow(0 4px 12px rgba(96,165,250,.6)) drop-shadow(0 0 30px rgba(139,92,246,.4))",
+                  marginBottom: 20,
+                  animation: "glow 3s ease-in-out infinite"
                 }}>セラ地理<br />モードの選択</div>
                 <div className="mode-grid">
                   {MODE_LIST.map(mode => (
                     <button key={mode} onClick={() => selectMode(mode)} className="mode-btn">{mode}</button>
                   ))}
                 </div>
-                <div style={{ marginTop:12, color:"#cbd5e1" }}>
+                <div style={{ marginTop:16, color:"#e0e7ff", fontSize: 15, fontWeight: 500 }}>
                   選択後、下の「スタート」でゲーム開始！
                 </div>
               </div>
@@ -680,14 +725,17 @@ export default function App() {
               display: 'flex', justifyContent: 'center', pointerEvents: 'none'
             }}>
               <div style={{
-                maxWidth: '90%', background: 'rgba(0,0,0,.45)', color: '#fff',
-                padding: '8px 12px', borderRadius: 12, backdropFilter: 'blur(2px)',
-                boxShadow: '0 4px 12px rgba(0,0,0,.35)'
+                maxWidth: '90%', 
+                background: 'linear-gradient(135deg, rgba(99,102,241,.75) 0%, rgba(139,92,246,.75) 100%)', 
+                color: '#fff',
+                padding: '10px 16px', borderRadius: 16, backdropFilter: 'blur(12px)',
+                boxShadow: '0 8px 20px rgba(99,102,241,.4), inset 0 1px 0 rgba(255,255,255,.2)',
+                border: '1px solid rgba(167,139,250,.3)'
               }}>
-                <div style={{ fontWeight: 800, fontSize: 18, textAlign: 'center', textShadow: '0 2px 4px rgba(0,0,0,.6)' }}>
+                <div style={{ fontWeight: 700, fontSize: 19, textAlign: 'center', textShadow: '0 2px 6px rgba(0,0,0,.4)', letterSpacing: '0.5px' }}>
                   問題：{current?.name}
                 </div>
-                <div style={{ fontSize: 12, opacity: .95, textAlign: 'center' }}>
+                <div style={{ fontSize: 13, opacity: .95, textAlign: 'center', marginTop: 4, color: '#e0e7ff' }}>
                   ヒント：{current?.hint || '（なし）'}
                 </div>
               </div>
@@ -699,12 +747,13 @@ export default function App() {
             <div style={{ position:'absolute', inset:0, zIndex: 11,
               display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
               <div style={{
-                fontSize: 64, fontWeight: 900, color: '#fff',
-                WebkitTextStroke: `3px ${result.correct ? '#16a34a' : '#ef4444'}`,
+                fontSize: 72, fontWeight: 900, color: '#fff',
+                WebkitTextStroke: `2px ${result.correct ? '#10b981' : '#f43f5e'}`,
                 textShadow: result.correct
-                  ? "0 0 18px rgba(34,197,94,.7), 0 0 36px rgba(34,197,94,.4)"
-                  : "0 0 18px rgba(239,68,68,.7), 0 0 36px rgba(239,68,68,.4)",
-                animation: 'popIn .5s ease-out both'
+                  ? "0 0 25px rgba(16,185,129,.8), 0 0 50px rgba(16,185,129,.5), 0 0 75px rgba(16,185,129,.3)"
+                  : "0 0 25px rgba(244,63,94,.8), 0 0 50px rgba(244,63,94,.5), 0 0 75px rgba(244,63,94,.3)",
+                animation: 'popIn .5s ease-out both',
+                filter: 'drop-shadow(0 4px 12px rgba(0,0,0,.6))'
               }}>{result.correct ? "正解！" : "不正解！"}</div>
             </div>
           )}
@@ -713,21 +762,26 @@ export default function App() {
           {gameOver && (
             <div style={{ position:'absolute', inset:0, zIndex: 12,
               display:'flex', alignItems:'center', justifyContent:'center',
-              background:'radial-gradient(closest-side, rgba(0,0,0,.5), rgba(0,0,0,.2), transparent)' }}>
-              <div style={{ textAlign:'center' }}>
-                <div style={{ color:'#e5e7eb', fontSize:18, marginBottom:6 }}>Time Up!</div>
+              background:'radial-gradient(closest-side, rgba(15,23,42,.7), rgba(15,23,42,.3), transparent)',
+              backdropFilter: 'blur(8px)' }}>
+              <div style={{ textAlign:'center', background: 'rgba(15,23,42,.85)', padding: '32px', borderRadius: '24px', backdropFilter: 'blur(12px)', border: '2px solid rgba(139,92,246,.3)', boxShadow: '0 20px 50px rgba(0,0,0,.6)' }}>
+                <div style={{ color:'#fbbf24', fontSize:20, marginBottom:10, fontWeight: 700, letterSpacing: '2px' }}>TIME UP!</div>
                 <div style={{
-                  fontSize: 64, fontWeight: 900, color:'#fff',
-                  WebkitTextStroke: "2px rgba(0,0,0,.6)",
-                  textShadow:"0 6px 18px rgba(0,0,0,.55)"
+                  fontFamily: "'Orbitron', 'Noto Sans JP', sans-serif",
+                  fontSize: 72, fontWeight: 900,
+                  background: "linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  filter: "drop-shadow(0 4px 12px rgba(96,165,250,.6))"
                 }}>
                   SCORE: {score}
                 </div>
-                <div style={{ color:'#cbd5e1', marginTop:8, fontSize:16 }}>
-                  あなたは <b>{titleForScore(score)}</b> です
+                <div style={{ color:'#e0e7ff', marginTop:12, fontSize:18, fontWeight: 600 }}>
+                  あなたは <b style={{color:'#fbbf24'}}>{titleForScore(score)}</b> です
                 </div>
-                <div style={{ color:'#cbd5e1', marginTop:8, fontSize:14 }}>
-                  正解 {correct}／解答 {answered}
+                <div style={{ color:'#cbd5e1', marginTop:10, fontSize:15 }}>
+                  正解 <b style={{color:'#86efac'}}>{correct}</b>／解答 <b style={{color:'#93c5fd'}}>{answered}</b>
                 </div>
 
                 {/* トップ3 */}
@@ -851,8 +905,8 @@ export default function App() {
 }
 
 // ===== styles helpers =====
-function btn(){ return { padding:"8px 12px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:'#fff', border:"1px solid rgba(255,255,255,0.2)", boxShadow:"0 1px 2px rgba(0,0,0,0.4)" }; }
-function primaryBtn(){ return { padding:"8px 12px", borderRadius:12, background:"#16a34a", color:"#fff", border:"1px solid #16a34a", boxShadow:"0 2px 8px rgba(0,0,0,0.4)" }; }
+function btn(){ return { padding:"10px 16px", borderRadius:14, background:"linear-gradient(135deg, rgba(71,85,105,.9) 0%, rgba(51,65,85,.9) 100%)", color:'#fff', border:"1px solid rgba(148,163,184,.3)", boxShadow:"0 4px 12px rgba(0,0,0,.4)", fontWeight: 600, transition: 'all 0.2s', cursor: 'pointer' }; }
+function primaryBtn(){ return { padding:"10px 20px", borderRadius:14, background:"linear-gradient(135deg, #10b981 0%, #059669 100%)", color:"#fff", border:"1px solid #059669", boxShadow:"0 4px 16px rgba(16,185,129,.4), inset 0 1px 0 rgba(255,255,255,.2)", fontWeight: 700, transition: 'all 0.2s', cursor: 'pointer' }; }
 
 // ===== optional exports =====
 export { haversineKm, seededShuffle, buildShareUrl };
