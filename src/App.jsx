@@ -19,6 +19,9 @@ const INCORRECT_PAUSE_MS       = 1000;   // 不正解後に1秒静止して次�
 const GAME_DURATION_DEFAULT    = 60;     // デフォゲーム時間
 const PASS_KM_DEFAULT          = 400;    // 正解判定の距離しきい値（km）
 const LEADERBOARD_KEY          = "sera-geo-top3";
+const STATS_KEY                = "sera-geo-stats";
+const BADGES_KEY               = "sera-geo-badges";
+const WRONG_ANSWERS_KEY        = "sera-geo-wrong-answers";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Globe from "react-globe.gl";
@@ -294,6 +297,112 @@ const MODE_LIST = [
   "その他"
 ];
 
+// ===== バッジ定義 =====
+const BADGES = [
+  { id: "first_play", name: "初めての一歩", desc: "初めてゲームをプレイ", icon: "🎮", condition: (stats) => stats.totalGames >= 1 },
+  { id: "perfect_game", name: "パーフェクト", desc: "1ゲームで全問正解", icon: "💯", condition: (stats) => stats.perfectGames >= 1 },
+  { id: "answer_100", name: "百戦錬磨", desc: "累計100問解答", icon: "📚", condition: (stats) => stats.totalAnswered >= 100 },
+  { id: "answer_500", name: "地理マニア", desc: "累計500問解答", icon: "🌍", condition: (stats) => stats.totalAnswered >= 500 },
+  { id: "correct_50", name: "正解の達人", desc: "累計50問正解", icon: "✨", condition: (stats) => stats.totalCorrect >= 50 },
+  { id: "correct_100", name: "地理博士", desc: "累計100問正解", icon: "🎓", condition: (stats) => stats.totalCorrect >= 100 },
+  { id: "high_score_1000", name: "スコアマスター", desc: "1000点以上を達成", icon: "⭐", condition: (stats) => stats.highScore >= 1000 },
+  { id: "high_score_1500", name: "スコアレジェンド", desc: "1500点以上を達成", icon: "🏆", condition: (stats) => stats.highScore >= 1500 },
+  { id: "accuracy_80", name: "高精度", desc: "正解率80%以上を達成", icon: "🎯", condition: (stats) => stats.totalAnswered >= 10 && (stats.totalCorrect / stats.totalAnswered) >= 0.8 },
+  { id: "all_modes", name: "全モード制覇", desc: "全モードをプレイ", icon: "🌟", condition: (stats) => Object.keys(stats.modeStats || {}).length >= 8 },
+  { id: "speed_demon", name: "スピードスター", desc: "平均解答速度3秒以下", icon: "⚡", condition: (stats) => stats.avgAnswerTime > 0 && stats.avgAnswerTime <= 3 },
+  { id: "play_10", name: "常連プレイヤー", desc: "10回プレイ", icon: "🎪", condition: (stats) => stats.totalGames >= 10 },
+  { id: "play_50", name: "ヘビープレイヤー", desc: "50回プレイ", icon: "🔥", condition: (stats) => stats.totalGames >= 50 },
+];
+
+// ===== 統計データ初期化 =====
+function initStats() {
+  return {
+    totalGames: 0,
+    totalAnswered: 0,
+    totalCorrect: 0,
+    highScore: 0,
+    fastestTime: 0,
+    perfectGames: 0,
+    avgAnswerTime: 0,
+    avgDistance: 0,
+    modeStats: {},
+    playHistory: []
+  };
+}
+
+// ===== 統計データ読み込み =====
+function loadStats() {
+  try {
+    const data = localStorage.getItem(STATS_KEY);
+    return data ? JSON.parse(data) : initStats();
+  } catch {
+    return initStats();
+  }
+}
+
+// ===== 統計データ保存 =====
+function saveStats(stats) {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch (e) {
+    console.error("Failed to save stats:", e);
+  }
+}
+
+// ===== 間違えた問題の読み込み =====
+function loadWrongAnswers() {
+  try {
+    const data = localStorage.getItem(WRONG_ANSWERS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+// ===== 間違えた問題の保存 =====
+function saveWrongAnswers(wrongAnswers) {
+  try {
+    // 最新100件まで保存
+    const limited = wrongAnswers.slice(-100);
+    localStorage.setItem(WRONG_ANSWERS_KEY, JSON.stringify(limited));
+  } catch (e) {
+    console.error("Failed to save wrong answers:", e);
+  }
+}
+
+// ===== 獲得バッジの読み込み =====
+function loadUnlockedBadges() {
+  try {
+    const data = localStorage.getItem(BADGES_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+// ===== 獲得バッジの保存 =====
+function saveUnlockedBadges(badges) {
+  try {
+    localStorage.setItem(BADGES_KEY, JSON.stringify(badges));
+  } catch (e) {
+    console.error("Failed to save badges:", e);
+  }
+}
+
+// ===== バッジチェック =====
+function checkNewBadges(stats, unlockedBadges) {
+  const newBadges = [];
+  const unlockedIds = new Set(unlockedBadges.map(b => b.id));
+  
+  for (const badge of BADGES) {
+    if (!unlockedIds.has(badge.id) && badge.condition(stats)) {
+      newBadges.push(badge);
+    }
+  }
+  
+  return newBadges;
+}
+
 // ===== 称号判定（250点刻み） =====
 function titleForScore(score){
       if (score >= 1750) return "もう君がセラ地理";
@@ -404,6 +513,14 @@ export default function App() {
     catch { return []; }
   });
 
+  // 統計とバッジ
+  const [showStats, setShowStats] = useState(false);
+  const [stats, setStats] = useState(() => loadStats());
+  const [unlockedBadges, setUnlockedBadges] = useState(() => loadUnlockedBadges());
+  const [wrongAnswers, setWrongAnswers] = useState(() => loadWrongAnswers());
+  const [newBadges, setNewBadges] = useState([]);
+  const [gameStartTime, setGameStartTime] = useState(null);
+
   const current = order[qIndex % Math.max(order.length, 1)];
 
   // ===== Audio Unlock =====
@@ -480,6 +597,7 @@ export default function App() {
     setTimeLeft(params.dur);
     setScore(0); setAnswered(0); setCorrect(0);
     setQIndex(0); setGuess(null); setResult(null);
+    setGameStartTime(Date.now());
     // BGMは useEffect(started/musicOn) で開始
     const first = newOrder[0];
     if (first) focusOn(first.coord);
@@ -488,6 +606,62 @@ export default function App() {
   function endGame() {
     setStarted(false);
     setGameOver(true);
+    
+    // 統計更新
+    const gameTime = gameStartTime ? (Date.now() - gameStartTime) / 1000 : params.dur;
+    const newStats = { ...stats };
+    newStats.totalGames = (newStats.totalGames || 0) + 1;
+    newStats.totalAnswered = (newStats.totalAnswered || 0) + answered;
+    newStats.totalCorrect = (newStats.totalCorrect || 0) + correct;
+    newStats.highScore = Math.max(newStats.highScore || 0, score);
+    
+    // パーフェクトゲーム判定
+    if (answered > 0 && correct === answered) {
+      newStats.perfectGames = (newStats.perfectGames || 0) + 1;
+    }
+    
+    // 平均解答時間
+    if (answered > 0) {
+      const avgTime = gameTime / answered;
+      newStats.avgAnswerTime = newStats.totalAnswered > answered 
+        ? (newStats.avgAnswerTime * (newStats.totalAnswered - answered) + avgTime * answered) / newStats.totalAnswered
+        : avgTime;
+    }
+    
+    // モード別統計
+    if (!newStats.modeStats) newStats.modeStats = {};
+    if (!newStats.modeStats[selectedMode]) {
+      newStats.modeStats[selectedMode] = { games: 0, answered: 0, correct: 0, highScore: 0 };
+    }
+    newStats.modeStats[selectedMode].games += 1;
+    newStats.modeStats[selectedMode].answered += answered;
+    newStats.modeStats[selectedMode].correct += correct;
+    newStats.modeStats[selectedMode].highScore = Math.max(newStats.modeStats[selectedMode].highScore, score);
+    
+    // プレイ履歴（最新20件）
+    if (!newStats.playHistory) newStats.playHistory = [];
+    newStats.playHistory.push({
+      date: new Date().toISOString(),
+      mode: selectedMode,
+      score,
+      correct,
+      answered,
+      time: gameTime
+    });
+    newStats.playHistory = newStats.playHistory.slice(-20);
+    
+    setStats(newStats);
+    saveStats(newStats);
+    
+    // バッジチェック
+    const newlyUnlocked = checkNewBadges(newStats, unlockedBadges);
+    if (newlyUnlocked.length > 0) {
+      const updated = [...unlockedBadges, ...newlyUnlocked];
+      setUnlockedBadges(updated);
+      saveUnlockedBadges(updated);
+      setNewBadges(newlyUnlocked);
+    }
+    
     // トップ3更新
     const next = [...top3, score].sort((a,b)=>b-a).slice(0,3);
     setTop3(next);
@@ -526,6 +700,20 @@ export default function App() {
     setAnswered(n => n + 1);
     if (ok) setCorrect(n => n + 1);
     setResult({ distKm, correct: ok, gained, qId: current.id });
+
+    // 不正解の場合は履歴に追加
+    if (!ok && current) {
+      const newWrong = [...wrongAnswers, {
+        name: current.name,
+        hint: current.hint,
+        coord: current.coord,
+        mode: selectedMode,
+        distKm,
+        date: new Date().toISOString()
+      }];
+      setWrongAnswers(newWrong);
+      saveWrongAnswers(newWrong);
+    }
 
     // 効果音
     try {
@@ -673,8 +861,9 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => setShowStats(true)} style={btn()} title="統計とバッジ">📊</button>
           <button onClick={() => setMusicOn(v => !v)} style={btn()}>音楽: {musicOn ? "ON" : "OFF"}</button>
-          <input title="音量" type="range" min={0} max={1} step={0.01} value={volume} onChange={(e)=>setVolume(Number(e.target.value))} />
+          <input className="hide-on-mobile" title="音量" type="range" min={0} max={1} step={0.01} value={volume} onChange={(e)=>setVolume(Number(e.target.value))} style={{width: 80}} />
           <button onClick={handleShare} style={btn()}>共有</button>
         </div>
       </header>
@@ -900,6 +1089,191 @@ export default function App() {
           <button onClick={enableAudioManually} style={primaryBtn()}>音を有効にする</button>
         </div>
       )}
+
+      {/* ====== 統計・バッジモーダル ====== */}
+      {showStats && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'rgba(0,0,0,.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16, overflowY: 'auto'
+        }} onClick={() => setShowStats(false)}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(15,23,42,.95) 0%, rgba(17,24,39,.95) 100%)',
+            borderRadius: 24, padding: 24, maxWidth: 800, width: '100%',
+            maxHeight: '90vh', overflowY: 'auto',
+            border: '2px solid rgba(139,92,246,.3)',
+            boxShadow: '0 25px 50px rgba(0,0,0,.6)'
+          }} onClick={(e) => e.stopPropagation()}>
+            
+            {/* ヘッダー */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 style={{
+                fontSize: 28, fontWeight: 900, margin: 0,
+                background: 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>📊 統計とバッジ</h2>
+              <button onClick={() => setShowStats(false)} style={{
+                ...btn(), padding: '8px 16px', fontSize: 20
+              }}>✕</button>
+            </div>
+
+            {/* 新バッジ通知 */}
+            {newBadges.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(16,185,129,.2) 0%, rgba(5,150,105,.2) 100%)',
+                border: '2px solid rgba(16,185,129,.5)',
+                borderRadius: 16, padding: 16, marginBottom: 20,
+                animation: 'popIn 0.5s ease-out'
+              }}>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#86efac' }}>
+                  🎉 新しいバッジを獲得！
+                </div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  {newBadges.map(badge => (
+                    <div key={badge.id} style={{
+                      background: 'rgba(255,255,255,.1)', borderRadius: 12, padding: '8px 12px',
+                      display: 'flex', alignItems: 'center', gap: 8
+                    }}>
+                      <span style={{ fontSize: 24 }}>{badge.icon}</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14 }}>{badge.name}</div>
+                        <div style={{ fontSize: 11, opacity: 0.8 }}>{badge.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setNewBadges([])} style={{
+                  ...primaryBtn(), marginTop: 12, padding: '6px 12px', fontSize: 13
+                }}>確認</button>
+              </div>
+            )}
+
+            {/* 全体統計 */}
+            <div style={{
+              background: 'rgba(99,102,241,.1)', borderRadius: 16, padding: 20, marginBottom: 20,
+              border: '1px solid rgba(99,102,241,.3)'
+            }}>
+              <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: '#c4b5fd' }}>
+                📈 全体統計
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
+                <StatCard label="プレイ回数" value={stats.totalGames || 0} icon="🎮" />
+                <StatCard label="総解答数" value={stats.totalAnswered || 0} icon="📝" />
+                <StatCard label="総正解数" value={stats.totalCorrect || 0} icon="✅" />
+                <StatCard label="最高スコア" value={stats.highScore || 0} icon="⭐" />
+                <StatCard label="正解率" value={stats.totalAnswered > 0 ? `${((stats.totalCorrect / stats.totalAnswered) * 100).toFixed(1)}%` : "0%"} icon="🎯" />
+                <StatCard label="パーフェクト" value={stats.perfectGames || 0} icon="💯" />
+              </div>
+            </div>
+
+            {/* バッジ一覧 */}
+            <div style={{
+              background: 'rgba(139,92,246,.1)', borderRadius: 16, padding: 20, marginBottom: 20,
+              border: '1px solid rgba(139,92,246,.3)'
+            }}>
+              <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: '#c4b5fd' }}>
+                🏆 バッジコレクション ({unlockedBadges.length}/{BADGES.length})
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+                {BADGES.map(badge => {
+                  const unlocked = unlockedBadges.find(b => b.id === badge.id);
+                  return (
+                    <div key={badge.id} style={{
+                      background: unlocked ? 'rgba(255,255,255,.15)' : 'rgba(255,255,255,.05)',
+                      borderRadius: 12, padding: 12, textAlign: 'center',
+                      border: unlocked ? '2px solid rgba(251,191,36,.5)' : '1px solid rgba(255,255,255,.1)',
+                      opacity: unlocked ? 1 : 0.5,
+                      transition: 'all 0.3s'
+                    }}>
+                      <div style={{ fontSize: 32, marginBottom: 4 }}>{badge.icon}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{badge.name}</div>
+                      <div style={{ fontSize: 10, opacity: 0.8, lineHeight: 1.3 }}>{badge.desc}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* モード別統計 */}
+            {stats.modeStats && Object.keys(stats.modeStats).length > 0 && (
+              <div style={{
+                background: 'rgba(96,165,250,.1)', borderRadius: 16, padding: 20, marginBottom: 20,
+                border: '1px solid rgba(96,165,250,.3)'
+              }}>
+                <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: '#93c5fd' }}>
+                  🎯 モード別統計
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {Object.entries(stats.modeStats).map(([mode, data]) => (
+                    <div key={mode} style={{
+                      background: 'rgba(255,255,255,.05)', borderRadius: 12, padding: 12,
+                      border: '1px solid rgba(255,255,255,.1)'
+                    }}>
+                      <div style={{ fontWeight: 700, marginBottom: 8, color: '#e0e7ff' }}>{mode}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8, fontSize: 13 }}>
+                        <div>プレイ: <b style={{color:'#93c5fd'}}>{data.games}</b></div>
+                        <div>解答: <b style={{color:'#93c5fd'}}>{data.answered}</b></div>
+                        <div>正解: <b style={{color:'#86efac'}}>{data.correct}</b></div>
+                        <div>正解率: <b style={{color:'#fbbf24'}}>{data.answered > 0 ? `${((data.correct / data.answered) * 100).toFixed(1)}%` : '0%'}</b></div>
+                        <div>最高: <b style={{color:'#f472b6'}}>{data.highScore}</b></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 間違えた問題 */}
+            {wrongAnswers.length > 0 && (
+              <div style={{
+                background: 'rgba(244,63,94,.1)', borderRadius: 16, padding: 20,
+                border: '1px solid rgba(244,63,94,.3)'
+              }}>
+                <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: '#fca5a5' }}>
+                  ❌ 間違えた問題 (最新{Math.min(wrongAnswers.length, 20)}件)
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
+                  {wrongAnswers.slice(-20).reverse().map((wrong, idx) => (
+                    <div key={idx} style={{
+                      background: 'rgba(255,255,255,.05)', borderRadius: 8, padding: 10,
+                      border: '1px solid rgba(255,255,255,.1)', fontSize: 13
+                    }}>
+                      <div style={{ fontWeight: 700, marginBottom: 4 }}>{wrong.name}</div>
+                      <div style={{ opacity: 0.8, fontSize: 11 }}>
+                        ヒント: {wrong.hint} | モード: {wrong.mode} | 距離: {wrong.distKm}km
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => {
+                  if (confirm('間違えた問題の履歴を削除しますか？')) {
+                    setWrongAnswers([]);
+                    saveWrongAnswers([]);
+                  }
+                }} style={{
+                  ...btn(), marginTop: 12, padding: '6px 12px', fontSize: 13
+                }}>履歴をクリア</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== StatCard Component =====
+function StatCard({ label, value, icon }) {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,.1)', borderRadius: 12, padding: 12,
+      border: '1px solid rgba(255,255,255,.15)', textAlign: 'center'
+    }}>
+      <div style={{ fontSize: 24, marginBottom: 4 }}>{icon}</div>
+      <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 2, color: '#fff' }}>{value}</div>
+      <div style={{ fontSize: 11, opacity: 0.8 }}>{label}</div>
     </div>
   );
 }
