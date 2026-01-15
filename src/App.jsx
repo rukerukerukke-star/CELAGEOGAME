@@ -621,18 +621,20 @@ export default function App() {
         @keyframes glow { 0%,100%{text-shadow:0 0 20px rgba(96,165,250,.6), 0 0 40px rgba(139,92,246,.4)} 50%{text-shadow:0 0 30px rgba(96,165,250,.8), 0 0 60px rgba(139,92,246,.6)} }
         .hide-on-mobile { display: none; }
         @media (min-width: 700px){ .hide-on-mobile { display: inline-flex; } }
-        .mode-grid { display:grid; gap:14px; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); }
+        .mode-grid { display:grid; gap:8px; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); }
+        @media (min-width: 700px){ .mode-grid { gap:14px; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); } }
         .mode-btn { 
-          font-weight:700; padding:16px 20px; border-radius:20px; 
+          font-weight:700; padding:12px 14px; border-radius:16px; font-size: 14px;
           background: linear-gradient(135deg, rgba(99,102,241,.85) 0%, rgba(139,92,246,.85) 100%);
           color:#fff; border:2px solid rgba(167,139,250,.4); 
           backdrop-filter: blur(10px); 
-          box-shadow:0 10px 25px rgba(99,102,241,.3), inset 0 1px 0 rgba(255,255,255,.2);
+          box-shadow:0 8px 20px rgba(99,102,241,.3), inset 0 1px 0 rgba(255,255,255,.2);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
           position: relative;
           overflow: hidden;
         }
+        @media (min-width: 700px){ .mode-btn { padding:16px 20px; border-radius:20px; font-size: 16px; } }
         .mode-btn::before {
           content: '';
           position: absolute;
@@ -699,21 +701,22 @@ export default function App() {
               <div style={{ pointerEvents:"auto", maxWidth: 880, width: "92%" }}>
                 <div style={{
                   fontFamily: "'Orbitron', 'Noto Sans JP', sans-serif",
-                  fontWeight: 900, fontSize: 48, 
+                  fontWeight: 900, fontSize: "clamp(24px, 6vw, 48px)", 
                   background: "linear-gradient(135deg, #60a5fa 0%, #a78bfa 40%, #f472b6 70%, #fbbf24 100%)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
                   filter: "drop-shadow(0 4px 12px rgba(96,165,250,.6)) drop-shadow(0 0 30px rgba(139,92,246,.4))",
-                  marginBottom: 20,
-                  animation: "glow 3s ease-in-out infinite"
+                  marginBottom: "clamp(12px, 3vw, 20px)",
+                  animation: "glow 3s ease-in-out infinite",
+                  lineHeight: 1.2
                 }}>セラ地理<br />モードの選択</div>
                 <div className="mode-grid">
                   {MODE_LIST.map(mode => (
                     <button key={mode} onClick={() => selectMode(mode)} className="mode-btn">{mode}</button>
                   ))}
                 </div>
-                <div style={{ marginTop:16, color:"#e0e7ff", fontSize: 15, fontWeight: 500 }}>
+                <div style={{ marginTop:"clamp(8px, 2vw, 16px)", color:"#e0e7ff", fontSize: "clamp(12px, 2.5vw, 15px)", fontWeight: 500 }}>
                   選択後、下の「スタート」でゲーム開始！
                 </div>
               </div>
