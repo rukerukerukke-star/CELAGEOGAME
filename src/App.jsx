@@ -309,6 +309,9 @@ const BADGES = [
   { id: "correct_100", name: "地理博士", desc: "累計100問正解", icon: "🎓", condition: (stats) => stats.totalCorrect >= 100 },
   { id: "high_score_1000", name: "スコアマスター", desc: "1000点以上を達成", icon: "⭐", condition: (stats) => stats.highScore >= 1000 },
   { id: "high_score_1500", name: "スコアレジェンド", desc: "1500点以上を達成", icon: "🏆", condition: (stats) => stats.highScore >= 1500 },
+  { id: "high_score_2000", name: "ガチ勢", desc: "2000点以上を達成", icon: "🔥", condition: (stats) => stats.highScore >= 2000 },
+  { id: "high_score_3000", name: "神の領域", desc: "3000点以上を達成", icon: "👑", condition: (stats) => stats.highScore >= 3000 },
+  { id: "high_score_4000", name: "セラ地理そのもの", desc: "4000点以上を達成", icon: "🌟", condition: (stats) => stats.highScore >= 4000 },
   { id: "accuracy_80", name: "高精度", desc: "正解率80%以上を達成", icon: "🎯", condition: (stats) => stats.totalAnswered >= 10 && (stats.totalCorrect / stats.totalAnswered) >= 0.8 },
   { id: "all_modes", name: "全モード制覇", desc: "全モードをプレイ", icon: "🌟", condition: (stats) => Object.keys(stats.modeStats || {}).length >= 8 },
   { id: "speed_demon", name: "スピードスター", desc: "平均解答速度3秒以下", icon: "⚡", condition: (stats) => stats.avgAnswerTime > 0 && stats.avgAnswerTime <= 3 },
@@ -405,16 +408,39 @@ function checkNewBadges(stats, unlockedBadges) {
   return newBadges;
 }
 
-// ===== 称号判定（250点刻み） =====
+// ===== 称号判定（100点刻み・超詳細版） =====
 function titleForScore(score){
-      if (score >= 1750) return "もう君がセラ地理";
-    if (score >= 1750) return "もはや地球";
-  if (score >= 1500) return "歩く地球儀";
-  if (score >= 1250) return "グーグルアース中毒者";
-  if (score >= 1000) return "いつも地図帳持ち歩いてる人";
+  // 🟡 神ゾーン（セラ地理の先）
+  if (score >= 4000) return "もう君がセラ地理";
+  if (score >= 3500) return "地球の代弁者";
+  if (score >= 3000) return "人間GPS";
+  
+  // 🔴 ガチ勢ゾーン（ここから面白くなる）
+  if (score >= 2800) return "もはや地球";
+  if (score >= 2600) return "地図帳をおかずに白飯３杯たべます。";
+  if (score >= 2400) return "プレートの動きを妄想して寝てます。";
+  if (score >= 2200) return "偏西風の気持ちがわかる";
+  if (score >= 2000) return "等高線でダンスする系人間";
+  
+  // 🟣 上級者ゾーン（クセ強）
+  if (score >= 1900) return "国境にロマン感じる民";
+  if (score >= 1800) return "衛星写真で場所当てられます。";
+  if (score >= 1700) return "歩く地球儀";
+  if (score >= 1600) return "地形でテンション上がるヤツ";
+  if (score >= 1500) return "グーグルアース中毒者";
+  
+  // 🔵 中級者ゾーン（リアル寄り）
+  if (score >= 1400) return "グーグルマップ信者";
+  if (score >= 1300) return "旅行で無駄に地図見るタイプ";
+  if (score >= 1200) return "地図帳持ち歩いてますけど。";
+  if (score >= 1100) return "都道府県は全部言えますよ。";
+  if (score >= 1000) return "方角くらいならわかります。";
+  
+  // 🟢 初心者ゾーン（ネタ強め）
   if (score >= 750)  return "地図帳は鍋敷きにしてます。";
   if (score >= 500)  return "地図帳は観賞用で置いてます。";
-  if (score >= 250)  return "地理は寝てたました。";
+  if (score >= 250)  return "地理は寝てました。";
+  
   return "方角方向オンチ";
 }
 
