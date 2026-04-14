@@ -906,6 +906,16 @@ export default function App() {
                 <div style={{ marginTop:"clamp(8px, 2vw, 16px)", color:"#e0e7ff", fontSize: "clamp(12px, 2.5vw, 15px)", fontWeight: 500 }}>
                   選択後、下の「スタート」でゲーム開始！
                 </div>
+                <div style={{ 
+                  marginTop: "clamp(12px, 3vw, 20px)", 
+                  fontSize: "clamp(10px, 1.8vw, 12px)", 
+                  color: "#64748b", 
+                  textAlign: "center",
+                  opacity: 0.6,
+                  fontWeight: 400
+                }}>
+                  ver 2.51
+                </div>
               </div>
             </div>
           )}
