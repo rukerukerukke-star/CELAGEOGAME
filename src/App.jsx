@@ -17,7 +17,7 @@ const AUTO_ROTATE_IN_GAME      = false;  // ゲーム中は回さない
 const AUTO_FOCUS_ON_QUESTION   = false;  // 問題切替では自動寄せしない（不正解時のみ寄せる）
 const INCORRECT_PAUSE_MS       = 1000;   // 不正解後に1秒静止して次へ
 const GAME_DURATION_DEFAULT    = 60;     // デフォゲーム時間
-const PASS_KM_DEFAULT          = 400;    // 正解判定の距離しきい値（km）
+const PASS_KM_DEFAULT          = 600;    // 正解判定の距離しきい値（km）- より広い範囲で正解
 const LEADERBOARD_KEY          = "sera-geo-top3";
 const STATS_KEY                = "sera-geo-stats";
 const BADGES_KEY               = "sera-geo-badges";
@@ -697,7 +697,8 @@ export default function App() {
   function evaluate(finalGuess) {
     const distKm = finalGuess ? Math.round(haversineKm(finalGuess, current.coord)) : 20000;
     const ok = distKm <= (params.km || PASS_KM_DEFAULT);
-    const gained = Math.max(0, Math.round(250 - distKm)); // 0〜250（近いほど高得点）
+    // ポイント計算を大幅に増やす（最大500点、距離に応じて減少）
+    const gained = Math.max(0, Math.round(500 - distKm * 0.8)); // 0〜500（近いほど高得点）
     setScore(s => s + gained);
     setAnswered(n => n + 1);
     if (ok) setCorrect(n => n + 1);
@@ -1009,8 +1010,8 @@ export default function App() {
             atmosphereAltitude={0.18}
             atmosphereColor="#7dd3fc"
             pointsData={points}
-            pointAltitude={() => 0.03}
-            pointRadius={0.6}
+            pointAltitude={() => 0.05}
+            pointRadius={1.2}
             pointColor={(d) => d.color}
             pointLabel={(d) => `${d.name}`}
             arcsData={arcs}
