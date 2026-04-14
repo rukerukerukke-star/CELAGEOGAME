@@ -723,8 +723,8 @@ export default function App() {
   function evaluate(finalGuess) {
     const distKm = finalGuess ? Math.round(haversineKm(finalGuess, current.coord)) : 20000;
     const ok = distKm <= (params.km || PASS_KM_DEFAULT);
-    // ポイント計算（最大400点、距離に応じて減少）
-    const gained = Math.max(0, Math.round(400 - distKm * 0.65)); // 0〜400（近いほど高得点）
+    // ポイント計算（最大300点、距離に応じて減少）
+    const gained = Math.max(0, Math.round(300 - distKm * 0.5)); // 0〜300（近いほど高得点）
     setScore(s => s + gained);
     setAnswered(n => n + 1);
     if (ok) setCorrect(n => n + 1);
