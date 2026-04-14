@@ -432,7 +432,7 @@ function titleForScore(score){
   // 🔵 中級者ゾーン（リアル寄り）
   if (score >= 1400) return "グーグルマップ信者";
   if (score >= 1300) return "旅行で無駄に地図見るタイプ";
-  if (score >= 1200) return "地図帳持ち歩いてますけど。";
+  if (score >= 1200) return "地図帳持ち歩いてますけどなにか。";
   if (score >= 1100) return "都道府県は全部言えますよ。";
   if (score >= 1000) return "方角くらいならわかります。";
   
@@ -723,8 +723,8 @@ export default function App() {
   function evaluate(finalGuess) {
     const distKm = finalGuess ? Math.round(haversineKm(finalGuess, current.coord)) : 20000;
     const ok = distKm <= (params.km || PASS_KM_DEFAULT);
-    // ポイント計算を大幅に増やす（最大500点、距離に応じて減少）
-    const gained = Math.max(0, Math.round(500 - distKm * 0.8)); // 0〜500（近いほど高得点）
+    // ポイント計算（最大400点、距離に応じて減少）
+    const gained = Math.max(0, Math.round(400 - distKm * 0.65)); // 0〜400（近いほど高得点）
     setScore(s => s + gained);
     setAnswered(n => n + 1);
     if (ok) setCorrect(n => n + 1);
@@ -1046,8 +1046,8 @@ export default function App() {
             atmosphereAltitude={0.18}
             atmosphereColor="#7dd3fc"
             pointsData={points}
-            pointAltitude={() => 0.05}
-            pointRadius={1.2}
+            pointAltitude={() => 0.08}
+            pointRadius={2.0}
             pointColor={(d) => d.color}
             pointLabel={(d) => `${d.name}`}
             arcsData={arcs}
