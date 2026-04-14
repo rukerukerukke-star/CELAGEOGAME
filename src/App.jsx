@@ -1045,11 +1045,44 @@ export default function App() {
             showAtmosphere
             atmosphereAltitude={0.18}
             atmosphereColor="#7dd3fc"
-            pointsData={points}
-            pointAltitude={() => 0.08}
-            pointRadius={2.0}
-            pointColor={(d) => d.color}
-            pointLabel={(d) => `${d.name}`}
+            htmlElementsData={points}
+            htmlElement={(d) => {
+              const el = document.createElement('div');
+              el.style.cssText = `
+                width: 40px;
+                height: 40px;
+                position: relative;
+                pointer-events: none;
+                transform: translate(-50%, -50%);
+              `;
+              // 二重丸を描画
+              const outerRing = document.createElement('div');
+              outerRing.style.cssText = `
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                border: 3px solid ${d.color};
+                opacity: 0.8;
+                box-sizing: border-box;
+              `;
+              const innerRing = document.createElement('div');
+              innerRing.style.cssText = `
+                position: absolute;
+                width: 60%;
+                height: 60%;
+                top: 20%;
+                left: 20%;
+                border-radius: 50%;
+                border: 2px solid ${d.color};
+                opacity: 1.0;
+                box-sizing: border-box;
+              `;
+              el.appendChild(outerRing);
+              el.appendChild(innerRing);
+              return el;
+            }}
+            htmlAltitude={() => 0.01}
             arcsData={arcs}
             arcColor={() => ["#60A5FA", "#3B82F6"]}
             arcDashLength={0.5}
