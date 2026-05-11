@@ -287,6 +287,35 @@ const EASY_OTHERS_NAMES = [
   "万里の長城","オペラハウス","マチュ・ピチュ","モン・サン＝ミシェル"
 ];
 
+// --- 世界の海峡 ---
+const STRAITS = [
+  { name:"マラッカ海峡", lat:2.0, lon:102.0, hint:"東南アジア・重要航路" },
+  { name:"ホルムズ海峡", lat:26.0, lon:56.0, hint:"ペルシャ湾" },
+  { name:"バブ・エル・マンデブ海峡", lat:13.0, lon:43.0, hint:"紅海南端" },
+  { name:"台湾海峡", lat:24.0, lon:119.0, hint:"台湾と中国の間" },
+  { name:"ルソン海峡", lat:20.0, lon:121.0, hint:"フィリピン北部" },
+  { name:"ロンボク海峡", lat:-8.0, lon:116.0, hint:"インドネシア" },
+  { name:"スンダ海峡", lat:-6.0, lon:105.0, hint:"ジャワとスマトラの間" },
+  { name:"ジブラルタル海峡", lat:36.0, lon:-5.0, hint:"地中海と大西洋" },
+  { name:"ボスポラス海峡", lat:41.0, lon:29.0, hint:"イスタンブール" },
+  { name:"ダーダネルス海峡", lat:40.0, lon:26.0, hint:"トルコ" },
+  { name:"ドーバー海峡", lat:51.0, lon:1.0, hint:"英仏海峡" },
+  { name:"オトラント海峡", lat:40.0, lon:19.0, hint:"アドリア海南端" },
+  { name:"カテガット海峡", lat:57.0, lon:11.0, hint:"北欧" },
+  { name:"スカゲラク海峡", lat:58.0, lon:9.0, hint:"北海とバルト海" },
+  { name:"ベーリング海峡", lat:66.0, lon:-169.0, hint:"米露間" },
+  { name:"フロリダ海峡", lat:24.0, lon:-81.0, hint:"フロリダとキューバ" },
+  { name:"モザンビーク海峡", lat:-18.0, lon:41.0, hint:"アフリカ東岸" },
+  { name:"マゼラン海峡", lat:-53.0, lon:-72.0, hint:"南米南端" },
+  { name:"デービス海峡", lat:67.0, lon:-56.0, hint:"グリーンランドとカナダ" },
+  { name:"津軽海峡", lat:41.0, lon:141.0, hint:"本州と北海道の間" },
+  { name:"対馬海峡", lat:34.0, lon:129.0, hint:"日本と韓国の間" },
+  { name:"鳴門海峡", lat:34.0, lon:134.0, hint:"四国と淡路島の間" }
+];
+const EASY_STRAITS_NAMES = [
+  "ジブラルタル海峡","ドーバー海峡","ベーリング海峡","マゼラン海峡","マラッカ海峡","ホルムズ海峡","津軽海峡","対馬海峡"
+];
+
 // ===== モード定義 =====
 const MODE_LIST = [
   "オールイン",
@@ -296,6 +325,7 @@ const MODE_LIST = [
   "世界の大河",
   "世界の山脈・高原",
   "世界の平野・盆地",
+  "世界の海峡",
   "その他"
 ];
 
@@ -313,7 +343,7 @@ const BADGES = [
   { id: "high_score_3000", name: "神の領域", desc: "3000点以上を達成", icon: "👑", condition: (stats) => stats.highScore >= 3000 },
   { id: "high_score_4000", name: "セラ地理そのもの", desc: "4000点以上を達成", icon: "🌟", condition: (stats) => stats.highScore >= 4000 },
   { id: "accuracy_80", name: "高精度", desc: "正解率80%以上を達成", icon: "🎯", condition: (stats) => stats.totalAnswered >= 10 && (stats.totalCorrect / stats.totalAnswered) >= 0.8 },
-  { id: "all_modes", name: "全モード制覇", desc: "全モードをプレイ", icon: "🌟", condition: (stats) => Object.keys(stats.modeStats || {}).length >= 8 },
+  { id: "all_modes", name: "全モード制覇", desc: "全モードをプレイ", icon: "🌟", condition: (stats) => Object.keys(stats.modeStats || {}).length >= 9 },
   { id: "speed_demon", name: "スピードスター", desc: "平均解答速度3秒以下", icon: "⚡", condition: (stats) => stats.avgAnswerTime > 0 && stats.avgAnswerTime <= 3 },
   { id: "play_10", name: "常連プレイヤー", desc: "10回プレイ", icon: "🎪", condition: (stats) => stats.totalGames >= 10 },
   { id: "play_50", name: "ヘビープレイヤー", desc: "50回プレイ", icon: "🔥", condition: (stats) => stats.totalGames >= 50 },
@@ -455,6 +485,7 @@ function getQuestionsByMode(mode){
     "世界の大河": normalize(RIVERS),
     "世界の山脈・高原": normalize(MOUNTAINS_PLATEAUS),
     "世界の平野・盆地": normalize(PLAINS_BASINS),
+    "世界の海峡": normalize(STRAITS),
     "その他": normalize(OTHERS),
   };
 
@@ -465,6 +496,7 @@ function getQuestionsByMode(mode){
       ...pickByNames(RIVERS, EASY_RIVERS_NAMES),
       ...pickByNames(MOUNTAINS_PLATEAUS, EASY_MOUNTAINS_PLATEAUS_NAMES),
       ...pickByNames(PLAINS_BASINS, EASY_PLAINS_BASINS_NAMES),
+      ...pickByNames(STRAITS, EASY_STRAITS_NAMES),
       ...pickByNames(OTHERS, EASY_OTHERS_NAMES),
     ];
     return normalize(easy);
@@ -477,6 +509,7 @@ function getQuestionsByMode(mode){
       ...RIVERS,
       ...MOUNTAINS_PLATEAUS,
       ...PLAINS_BASINS,
+      ...STRAITS,
       ...OTHERS
     ]);
   }
